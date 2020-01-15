@@ -13,13 +13,6 @@ def encode_mesh_vectors():
     return 
 
 
-
-def encode_mesh():
-    encode_mesh_struct()
-    encode_mesh_vectors()
-
-    return 
-
-def encode_dct():
+def encode_dct(): 
 
     return
