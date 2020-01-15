@@ -1,4 +1,4 @@
-import runLength_encoding as rlc
+import runLength_encoder as rlc
 
 def encode_mesh():
     encoded_meshStruct, meshStructSize = rlc.encode_mesh_struct()
