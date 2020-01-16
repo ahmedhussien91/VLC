@@ -1,7 +1,8 @@
-def SerializeIntoBitStream():
+def SerializeIntoBitStream(data):
+    SerializedStr = data
 
-    return
+    return SerializedStr
 
-def deSerialize_bitStream():
-
-    return
+def deSerialize_bitStream(SerializedStr):
+    data = SerializedStr
+    return data

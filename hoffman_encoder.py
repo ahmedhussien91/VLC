@@ -1,10 +1,10 @@
 
 
 
-def encode_hoffman():
+def encode_hoffman(symbolList):
+    data = symbolList
+    return data
 
-    return
-
-def decode_hoffman():
-
-    return
+def decode_hoffman(data):
+    symbolList = data
+    return symbolList
