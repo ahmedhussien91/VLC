@@ -1,5 +1,6 @@
 import configuration as cfg
 
+########################################### Run lenght coding #######################################################
 def encode(text):
 
     """
@@ -71,21 +72,36 @@ def decode(text):
 
     return result
 
+########################################### Encoder #################################################################
+def encode_meshStruct(): 
 
-def encode_mesh_struct(): 
-
-    return 
+    return encoded_meshStruct, meshStructSize
 
 
-def encode_mesh_vectors(): 
+def encode_meshVectors(): 
 
-    return 
+    return encoded_meshVector, meshVectorSize
 
 
 def encode_dct(): 
 
-    return
+    return encoded_dct, dctSize
 
+
+######################################### Decoder ###################################################################
+def decode_meshStruct(): 
+
+    return decoded_meshStruct, meshStructSize
+
+
+def decode_meshVectors(): 
+
+    return decoded_meshVectors, meshVectorsSize 
+
+
+def decode_dct(): 
+
+    return encoded_dct, dctSize 
 
 if __name__ == "__main__":    
     encoded_str = encode("aaabbcdddd")
