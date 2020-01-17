@@ -7,6 +7,10 @@ Data type Configurations:
 - "NO_OF_SYMBOL_BITS": max number of bits to carry all the symbols of the data type, e.g "SYMBOLS_COUNT"=64 -> "NO_OF_SYMBOL_BITS"=6  
 - "FULL_LENGTH": "NO_OF_SYMBOL_BITS" + "NO_OF_MAX_COUNT_BITS" 
  '''
+# Valid frame types
+DCT_FRAME = 0
+MESH_FRAME = 1
+MOTION_VECTORS_FRAME = 2
 
 # runlenght_config Structure Indices 
 MESH = 0
