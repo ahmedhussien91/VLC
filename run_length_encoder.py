@@ -20,12 +20,12 @@ def encode(text):
     """
 
     count = 1
-    previous = ""
+    previous = None
     mapping = list()
 
     for character in text:
         if character != previous:
-            if previous:
+            if previous != None:
                 mapping.append((previous, count))
             count = 1
             previous = character
@@ -34,11 +34,11 @@ def encode(text):
     else:
         mapping.append((character, count))
 
-    result = ""
+    result = []
 
     for character, count in mapping:
-            result += str(count)
-            result += character
+            result.append(str(count))
+            result.append(str(character))
 
     return result
 
@@ -59,7 +59,7 @@ def decode(text):
         input: "3a2b1c4d"
         returns: "aaabbcdddd"
     """
-    result= ""
+    result= []
     isCount = True
     for character in text:
         if isCount:
@@ -67,24 +67,30 @@ def decode(text):
             isCount = False
         else:
             for i in range(count):
-                result += character
+                result.append(character)
             isCount = True                
 
     return result
 
 ########################################### Encoder #################################################################
-def encode_meshStruct(): 
-
+def encode_meshStruct(data_np_arr): 
+    encoded_meshStruct = encode(list(data_np_arr))
+    meshStructSize = len(encoded_meshStruct)
     return encoded_meshStruct, meshStructSize
 
 
-def encode_meshVectors(): 
-
+def encode_meshVectors(data_np_arr): 
+    encoded_meshVector = encode(list(data_np_arr))
+    meshVectorSize = len(encoded_meshVector)
     return encoded_meshVector, meshVectorSize
 
 
-def encode_dct(): 
-
+def encode_dct(data_np_arr_list):
+    encoded_dct = []
+    dctSize = []
+    for i,data_np_arr in enumerate(data_np_arr_list):
+        encoded_dct.append(encode(list(data_np_arr)))
+        dctSize.append(len(encoded_dct[i])) 
     return encoded_dct, dctSize
 
 
@@ -103,7 +109,8 @@ def decode_dct():
 
     return encoded_dct, dctSize 
 
-if __name__ == "__main__":    
+if __name__ == "__main__":
+        
     encoded_str = encode("aaabbcdddd")
     print(encoded_str)
     print(decode(encoded_str))

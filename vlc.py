@@ -3,28 +3,30 @@ import run_length_encoder as rlc
 import serializer as serl
 import file_handler as f
 import numpy as np
+import configuration as cfg
+import collections as col
 
 ############################################## Encoder ############################################################
-def encode_mesh():
-    encoded_meshStruct, meshStructSize = rlc.encode_meshStruct()
-    encoded_meshVector, meshVectorSize = rlc.encode_meshVectors()
-    symbolList = encoded_meshVector + encoded_meshStruct
+def encode_mesh(data):
+    encoded_meshStruct, meshStructSize = rlc.encode_meshStruct(data[1])
+    encoded_meshVector, meshVectorSize = rlc.encode_meshVectors(data[2])
+    symbolList = [data [0]] + encoded_meshStruct + encoded_meshVector
 
-    data = hoff.encode_hoffman(symbolList)
-    binaryStreamStr = serl.SerializeIntoBitStream(data)
-    # write frist time then append
-    f.write_to_binaryFile(binaryStreamStr)
-    return out
+    # data = hoff.encode_hoffman(symbolList)
+    # binaryStreamStr = serl.SerializeIntoBitStream(data)
+    # # write frist time then append
+    # f.write_to_binaryFile(binaryStreamStr)
+    return symbolList
 
-def encode_dct():
-    encoded_dct, dctSize = rlc.encode_dct()
+def encode_dct(data):
+    encoded_dct, dctSize = rlc.encode_dct(data)
     symbolList = encoded_dct
 
-    data = hoff.encode_hoffman(symbolList)
-    binaryStreamStr = serl.SerializeIntoBitStream(data)
-    # write frist time then append 
-    f.write_to_binaryFile(binaryStreamStr)
-    return out
+    # data = hoff.encode_hoffman(symbolList)
+    # binaryStreamStr = serl.SerializeIntoBitStream(data)
+    # # write frist time then append 
+    # f.write_to_binaryFile(binaryStreamStr)
+    return symbolList
 
 ############################################## Decoder #############################################################
 def decode_mesh(listOfData):
@@ -63,15 +65,30 @@ def decode():
     return
 
 if __name__ == "__main__":    
-    # input
-    
-    encoded_str_mesh = encode_mesh()
-    encoded_str_dct = encode_dct()
-    print("input:")
-    print(encoded_str_mesh)
-    print(encoded_str_dct)
-    # output
-    print("\noutput:")
-    # print(decode_mesh(encoded_str_mesh))
-    # print(decode_dct(encoded_str_dct))
-    decode()    
+    toggle = 0
+    while (1):
+        # input
+        # DCT
+        DCT_ip = [np.random.randint(cfg.runlenght_config[cfg.DCT]["SYMBOLS_COUNT"],size=cfg.NO_OF_DCT_BLOCKS),np.random.randint(cfg.runlenght_config[cfg.DCT]["SYMBOLS_COUNT"]
+        ,size=int(cfg.NO_OF_DCT_BLOCKS/4)),np.random.randint(cfg.runlenght_config[cfg.DCT]["SYMBOLS_COUNT"], size=int(cfg.NO_OF_DCT_BLOCKS/4))]
+        # mesh
+        mesh_struct =  np.random.randint(2,size=cfg.LAYER1_MESH_STRUCT_SIZE)
+        mesh_ip = [256,mesh_struct,np.random.randint(-7,7,size = col.Counter(mesh_struct)[1])]
+        print("\n\n\ninput:")
+        if(toggle):
+            print(mesh_ip)
+            encoded_str = encode_mesh(mesh_ip)
+            print("\nencoded_str:")
+            print(encoded_str)
+            toggle = 0
+        else:
+            print(DCT_ip)
+            encoded_str = encode_dct(DCT_ip)
+            print("\nencoded_str:")
+            print(encoded_str)
+            toggle = 1 
+        # output
+        # print("\noutput:")
+        # # print(decode_mesh(encoded_str_mesh))
+        # # print(decode_dct(encoded_str_dct))
+        # decode(encoded_str)    
