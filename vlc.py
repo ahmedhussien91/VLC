@@ -99,6 +99,8 @@ def encode(frame_type, listOfData):
     elif(frame_type == cfg.MOTION_VECTORS_FRAME):
         encode_mesh(0, 0, listOfData[0])
     elif(frame_type == cfg.END_FRAME):
+        if cfg.ENCODER_MODE == 1:
+            stat.GetProbability_GenerateHoffmanTable()
         pass # TODO: call Ramy function to end the file
 
     return
