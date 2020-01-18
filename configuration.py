@@ -49,6 +49,9 @@ runlenght_config = ([
 INPUT_FILE_NAME = ""
 OUTPUT_FILE_NAME = ""
 
+# Encoder Mode
+ENCODER_MODE = 0
+
 # YUV format
 YUV_CONFIG = [4, 1, 1]
 

@@ -19,8 +19,9 @@ def load_coding_dictionaries():
 #   "frame_type" is one of the types in configuration.py under the comment "Valid frame types"
 #   [DCT_FRAME, MESH_FRAME, or MOTION_VECTORS_FRAME]
 #   This function returns True if a new frame started successfully, False if there is already a frame opened to encode
-def begin_encoding(frame_type):
+def begin_encoding(frame_type, box_size = 0):
     print("frame started with type = " + str(frame_type))
+    print("box_size" + box_size)
     return True
 
 
@@ -49,7 +50,8 @@ def decode():
     data = [[True, np.array([5, 0, 6, 1, 10, 0])],
             [False, np.array([0, 1, 0, 1, 0, 1])],
             [True, np.array([5, 0, 6, 1, 10, 0])]]
-    return frame_type, data
+    box_size = 256
+    return frame_type, box_size, data
 
 
 if __name__ == "__main__":

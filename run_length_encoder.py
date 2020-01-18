@@ -93,16 +93,20 @@ def encode_meshStruct(data_np_arr_list):
 def encode_meshVectors(data_np_arr_list):
     encoded_meshVector = []
     is_run_length_valid = []
-    for i,data_np_arr in enumerate(data_np_arr_list): 
-        encoded_meshVector.append(encode(list(data_np_arr)))
+    concatenated_dct = []
+
+    # concatenate the dct
+    concatenated_dct = [concatenated_dct + x for x in list(data_np_arr_list)]
+    # Do Run length coding
+    encoded_meshVector = encode(concatenated_dct)
     # check that the runlength coding valid for each data block
-    for i, data_np_arr in enumerate(data_np_arr_list):
-        if len(data_np_arr) < len(encoded_meshVector[i]):
-            is_run_length_valid[i] = False
-            encoded_meshVector[i] = data_np_arr
-            stat.meshVector_isRunLenghtCodingValid_InValidcount = stat.meshVector_isRunLenghtCodingValid_InValidcount + 1
-        else:
-            stat.meshVector_isRunLenghtCodingValid_Validcount = stat.meshVector_isRunLenghtCodingValid_Validcount + 1
+    if len(concatenated_dct) < len(encoded_meshVector):
+        is_run_length_valid = False
+        encoded_meshVector = concatenated_dct
+        stat.meshVector_isRunLenghtCodingValid_InValidcount = stat.meshVector_isRunLenghtCodingValid_InValidcount + 1
+    else:
+        stat.meshVector_isRunLenghtCodingValid_Validcount = stat.meshVector_isRunLenghtCodingValid_Validcount + 1
+
     return encoded_meshVector, is_run_length_valid
 
 
@@ -119,23 +123,32 @@ def encode_dct(data_np_arr_list):
             stat.DCT_isRunLenghtCodingValid_InValidcount = stat.DCT_isRunLenghtCodingValid_InValidcount + 1
         else:
             stat.DCT_isRunLenghtCodingValid_Validcount = stat.DCT_isRunLenghtCodingValid_Validcount + 1
-    return encoded_dct
+    return encoded_dct, is_run_length_valid
 
 
 ######################################### Decoder ###################################################################
-def decode_meshStruct(): 
+def decode_mesh(initial_mesh_block_size, meshStruct_np_arr, meshVectors_np_arr):
+    decoded_meshStruct, meshStructSize = rlc.decode_meshStruct()
+    decoded_meshVectors, meshVectorsSize = rlc.decode_meshVectors()
 
-    return decoded_meshStruct, meshStructSize
-
-
-def decode_meshVectors(): 
-
-    return decoded_meshVectors, meshVectorsSize 
+    return
 
 
-def decode_dct(): 
+def decode_dct(is_run_length_valid, dct_np_arr):
+    quantized_dct_list = []
+    # decode run length if it's valid
+    if is_run_length_valid:
+        dct_np_arr = decode(list(dct_np_arr))
+    # separate into 3 lists depending on configuration
+    cfg_sum = sum(cfg.YUV_CONFIG)
+    ysize = (cfg.YUV_CONFIG[0] / cfg_sum) * len(list(dct_np_arr))
+    usize = (cfg.YUV_CONFIG[1] / cfg_sum) * len(list(dct_np_arr))
+    vsize = (cfg.YUV_CONFIG[2] / cfg_sum) * len(list(dct_np_arr))
+    quantized_dct_list.append(dct_np_arr[0: ysize])
+    quantized_dct_list.append(dct_np_arr[ysize: ysize + usize])
+    quantized_dct_list.append(dct_np_arr[ysize + usize: ysize + usize + vsize])
 
-    return encoded_dct, dctSize 
+    return quantized_dct_list
 
 if __name__ == "__main__":
         
