@@ -5,28 +5,37 @@ import file_handler as f
 import numpy as np
 import configuration as cfg
 import collections as col
+import statistics_module as stat
+
 
 ############################################## Encoder ############################################################
-def encode_mesh(data):
-    encoded_meshStruct, meshStructSize = rlc.encode_meshStruct(data[1])
-    encoded_meshVector, meshVectorSize = rlc.encode_meshVectors(data[2])
-    symbolList = [data [0]] + encoded_meshStruct + encoded_meshVector
+def encode_mesh(initial_mesh_block_size, mesh_struct_list, motion_vectors_list):
 
+    # encode using runlenght coding
+    if mesh_struct_list is not None:  # TODO: Recheck this condition
+        encoded_meshStruct, is_runlength_valid = rlc.encode_meshStruct(mesh_struct_list)
+    else:
+        encoded_meshStruct = []
+    encoded_meshVector, is_runlength_valid = rlc.encode_meshVectors(motion_vectors_list)
+    # TODO: Do statistics on symbols
+    stat.DoStatistics_mesh(encoded_meshStruct, encoded_meshVector)
+    # TODO: Call the hoffman with the agreed sequence, check on encoded_meshStruct
     # data = hoff.encode_hoffman(symbolList)
     # binaryStreamStr = serl.SerializeIntoBitStream(data)
-    # # write frist time then append
+    # # write first time then append
     # f.write_to_binaryFile(binaryStreamStr)
-    return symbolList
+    return
 
-def encode_dct(data):
-    encoded_dct, dctSize = rlc.encode_dct(data)
-    symbolList = encoded_dct
-
+def encode_dct(quantized_dct_list):
+    encoded_dct, is_runlength_valid = rlc.encode_dct(quantized_dct_list)
+    # TODO: Do statistics on symbols
+    stat.DoStatistics_DCT(encoded_dct)
+    # TODO: Call the hoffman with the agreed sequance
     # data = hoff.encode_hoffman(symbolList)
     # binaryStreamStr = serl.SerializeIntoBitStream(data)
     # # write frist time then append 
     # f.write_to_binaryFile(binaryStreamStr)
-    return symbolList
+    return
 
 ############################################## Decoder #############################################################
 def decode_mesh(listOfData):
@@ -72,8 +81,8 @@ if __name__ == "__main__":
         DCT_ip = [np.random.randint(cfg.runlenght_config[cfg.DCT]["SYMBOLS_COUNT"],size=cfg.NO_OF_DCT_BLOCKS),np.random.randint(cfg.runlenght_config[cfg.DCT]["SYMBOLS_COUNT"]
         ,size=int(cfg.NO_OF_DCT_BLOCKS/4)),np.random.randint(cfg.runlenght_config[cfg.DCT]["SYMBOLS_COUNT"], size=int(cfg.NO_OF_DCT_BLOCKS/4))]
         # mesh
-        mesh_struct =  np.random.randint(2,size=cfg.LAYER1_MESH_STRUCT_SIZE)
-        mesh_ip = [256,mesh_struct,np.random.randint(-7,7,size = col.Counter(mesh_struct)[1])]
+        mesh_struct =  [np.random.randint(2,size=cfg.LAYER1_MESH_STRUCT_SIZE), np.random.randint(2,size=cfg.LAYER1_MESH_STRUCT_SIZE*4), np.random.randint(2,size=cfg.LAYER1_MESH_STRUCT_SIZE*4)]
+        mesh_ip = [256,mesh_struct,[np.random.randint(-7,7,size = col.Counter(mesh_struct[0])[1]), np.random.randint(-7,7,size = col.Counter(mesh_struct[1])[1]), np.random.randint(-7,7,size = col.Counter(mesh_struct[2])[1])]]
         print("\n\n\ninput:")
         if(toggle):
             print(mesh_ip)
@@ -81,14 +90,15 @@ if __name__ == "__main__":
             print("\nencoded_str:")
             print(encoded_str)
             toggle = 0
+            # print("\noutput:")
+            # print(decode_mesh(encoded_str))
         else:
             print(DCT_ip)
             encoded_str = encode_dct(DCT_ip)
             print("\nencoded_str:")
             print(encoded_str)
             toggle = 1 
+            # print("\noutput:")
+            # print(decode_dct(encoded_str))
         # output
-        # print("\noutput:")
-        # # print(decode_mesh(encoded_str_mesh))
-        # # print(decode_dct(encoded_str_dct))
         # decode(encoded_str)    
