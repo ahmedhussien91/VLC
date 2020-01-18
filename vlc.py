@@ -97,7 +97,7 @@ def encode(frame_type, listOfData):
     elif(frame_type == cfg.MESH_FRAME):
         encode_mesh(listOfData[0], listOfData[1], listOfData[2])
     elif(frame_type == cfg.MOTION_VECTORS_FRAME):
-        encode_mesh(0, None, listOfData[0])
+        encode_mesh(0, 0, listOfData[0])
     elif(frame_type == cfg.END_FRAME):
         pass # TODO: call Ramy function to end the file
 
@@ -112,9 +112,9 @@ def decode():
         decoded_data = rlc.decode_dct(listOfData[0][0], listOfData[0][1])
     elif (frame_type == cfg.MESH_FRAME):
         initial_mesh_block_size = box_size
-        decoded_data = rlc.decode_mesh(initial_mesh_block_size, listOfData[0], listOfData[1])
+        decoded_data = rlc.decode_mesh(initial_mesh_block_size, listOfData)
     elif (frame_type == cfg.MOTION_VECTORS_FRAME):
-        decoded_data = rlc.decode_mesh(None, listOfData[0])
+        decoded_data = rlc.decode_mesh(0, None, listOfData[0])
     elif (frame_type == cfg.END_FRAME):
         pass  # TODO: call Ramy function to end the file
 

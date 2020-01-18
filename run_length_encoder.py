@@ -1,5 +1,6 @@
 import configuration as cfg
 import statistics_module as stat
+import numpy as np
 
 ########################################### Run lenght coding #######################################################
 def encode(text):
@@ -127,9 +128,38 @@ def encode_dct(data_np_arr_list):
 
 
 ######################################### Decoder ###################################################################
-def decode_mesh(initial_mesh_block_size, meshStruct_np_arr, meshVectors_np_arr):
-    decoded_meshStruct, meshStructSize = rlc.decode_meshStruct()
-    decoded_meshVectors, meshVectorsSize = rlc.decode_meshVectors()
+def decode_mesh(initial_mesh_block_size, data_np_arr_list):
+    box_size = 0
+    decoded_meshStruct = []
+    decoded_meshVectors = []
+    # add the initial_mesh_block_size
+    if initial_mesh_block_size:
+        box_size = initial_mesh_block_size
+    # add mesh struct and mesh vectors
+    isStruct = True
+    for i, data_np_arr_rlcValid in enumerate(data_np_arr_list):
+        if initial_mesh_block_size:
+            if isStruct:
+                if data_np_arr_list[i][0]:
+                    decoded_meshStruct.append(np.array(decode(list(data_np_arr_rlcValid[i][1]))))
+                else:
+                    decoded_meshStruct.append(data_np_arr_rlcValid[i][1])
+                isStruct = False
+            else :
+                if data_np_arr_list[i][0]:
+                    decoded_meshVectors.append(np.array(decode(list(data_np_arr_rlcValid[i][1]))))
+                else:
+                    decoded_meshVectors.append(data_np_arr_rlcValid[i][1])
+                isStruct = True
+        else:
+            if data_np_arr_list[i][0]:
+                decoded_meshVectors.append(np.array(decode(list(data_np_arr_rlcValid[i][1]))))
+            else:
+                decoded_meshVectors.append(data_np_arr_rlcValid[i][1])
+
+    return [box_size, decoded_meshStruct, decoded_meshVectors]
+
+
 
     return
 
@@ -144,9 +174,9 @@ def decode_dct(is_run_length_valid, dct_np_arr):
     ysize = (cfg.YUV_CONFIG[0] / cfg_sum) * len(list(dct_np_arr))
     usize = (cfg.YUV_CONFIG[1] / cfg_sum) * len(list(dct_np_arr))
     vsize = (cfg.YUV_CONFIG[2] / cfg_sum) * len(list(dct_np_arr))
-    quantized_dct_list.append(dct_np_arr[0: ysize])
-    quantized_dct_list.append(dct_np_arr[ysize: ysize + usize])
-    quantized_dct_list.append(dct_np_arr[ysize + usize: ysize + usize + vsize])
+    quantized_dct_list.append(np.array(dct_np_arr[0: ysize]))
+    quantized_dct_list.append(np.array(dct_np_arr[ysize: ysize + usize]))
+    quantized_dct_list.append(np.array(dct_np_arr[ysize + usize: ysize + usize + vsize]))
 
     return quantized_dct_list
 
