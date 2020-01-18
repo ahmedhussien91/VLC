@@ -31,7 +31,7 @@ def DoStatistics_mesh(encoded_meshStruct_list, encoded_meshVector_list):
 
     # count the total mesh cycles
     mesh_Total_Count = mesh_Total_Count + 1
-    # Hoffman
+    # Huffman
     ## count the total number of symbols then count unique symbols then append on dictionary
     if not encoded_meshStruct_list:
         for encoded_meshStruct in encoded_meshStruct_list:
@@ -58,7 +58,7 @@ def DoStatistics_DCT(encoded_dct_list):
 
     # count the total DCT cycles
     DCT_Total_Count = DCT_Total_Count + 1
-    # Hoffman
+    # Huffman
     ## count the total number of symbols then count unique symbols then append on dictionary
     for encoded_dct in encoded_dct_list:
         DCT_total_symbols_count = DCT_total_symbols_count + len(encoded_dct)

@@ -11,6 +11,7 @@ Data type Configurations:
 DCT_FRAME = 0
 MESH_FRAME = 1
 MOTION_VECTORS_FRAME = 2
+EOF_REACHED = 3
 
 # runlenght_config Structure Indices 
 MESH = 0
@@ -43,6 +44,13 @@ runlenght_config = ([
         "FULL_LENGTH" : 12,    # 6+6
     }
 ])
+
+# Input/Output file paths
+INPUT_FILE_NAME = ""
+OUTPUT_FILE_NAME = ""
+
+# YUV format
+YUV_CONFIG = [4, 1, 1]
 
 # DCT Input Image Configuration
 FRAME_RESOLUTION = [3840, 2160] 
