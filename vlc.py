@@ -50,7 +50,7 @@ def init_decoder(input_filename):
 def encode_mesh(initial_mesh_block_size, mesh_struct_list, motion_vectors_list):
     encoded_data = [] # used for testing
     # encode using runlenght coding
-    if mesh_struct_list is not None:
+    if mesh_struct_list:
         encoded_meshStruct_list, is_runlength_valid_struct = rlc.encode_meshStruct(mesh_struct_list)
         frame_type = cfg.MESH_FRAME
     else:
@@ -137,7 +137,7 @@ if __name__ == "__main__":
         print("\n\n\ninput:")
         if(toggle):
             print(mesh_ip)
-            frame_type, encoded_str = encode(cfg.MESH_FRAME, mesh_ip)
+            frame_type, encoded_str = encode(cfg.MOTION_VECTORS_FRAME, mesh_ip)
             print("\nencoded_str:")
             print(encoded_str)
             toggle = 0
