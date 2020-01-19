@@ -21,7 +21,7 @@ def load_coding_dictionaries():
 #   This function returns True if a new frame started successfully, False if there is already a frame opened to encode
 def begin_encoding(frame_type, box_size = 0):
     print("frame started with type = " + str(frame_type))
-    print("box_size" + box_size)
+    print("box_size" + str(box_size))
     return True
 
 

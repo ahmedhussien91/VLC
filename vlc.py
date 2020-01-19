@@ -48,7 +48,7 @@ def init_decoder(input_filename):
 
 ############################################## Encoder ############################################################
 def encode_mesh(initial_mesh_block_size, mesh_struct_list, motion_vectors_list):
-    frame_type = 0
+    encoded_data = [] # used for testing
     # encode using runlenght coding
     if mesh_struct_list is not None:
         encoded_meshStruct_list, is_runlength_valid_struct = rlc.encode_meshStruct(mesh_struct_list)
@@ -64,11 +64,13 @@ def encode_mesh(initial_mesh_block_size, mesh_struct_list, motion_vectors_list):
     if cfg.ENCODER_MODE == 0:
         huff.begin_encoding(frame_type, initial_mesh_block_size)
         for i, encoded_meshVector in enumerate(encoded_meshVector_list):
-            if frame_type == cfg.MESH_FRAME:
-                huff.encode(is_runlength_valid_struct[i], encoded_meshStruct_list[i])
-            huff.encode(is_runlength_valid_vectors[i], encoded_meshVector)
+            if mesh_struct_list:
+                encoded_data.append([is_runlength_valid_struct[i], np.array(encoded_meshStruct_list[i])])
+                huff.encode(is_runlength_valid_struct[i], np.array(encoded_meshStruct_list[i]))
+            encoded_data.append([is_runlength_valid_vectors[i], np.array(encoded_meshVector)])
+            huff.encode(is_runlength_valid_vectors[i], np.array(encoded_meshVector))
         huff.end_encoding()
-    return
+    return encoded_data
 
 def encode_dct(quantized_dct_list):
     frame_type = cfg.DCT_FRAME
@@ -79,10 +81,10 @@ def encode_dct(quantized_dct_list):
     # Call the hoffman with the agreed sequance
     if cfg.ENCODER_MODE == 0:
         huff.begin_encoding(frame_type)
-        huff.encode(is_runlength_valid, encoded_dct)
+        huff.encode(is_runlength_valid, np.array(encoded_dct))
         huff.end_encoding()
 
-    return
+    return [is_runlength_valid, encoded_dct]
 
 '''I/P: frame_type: 0 -> DCT_FRAME, 1 -> MESH_FRAME, 2 -> MOTION_VECTORS_FRAME, 3 -> EOF_REACHED 
         listOfData: for DCT list of list of np array, 
@@ -93,17 +95,17 @@ def encode_dct(quantized_dct_list):
 def encode(frame_type, listOfData):
 
     if(frame_type == cfg.DCT_FRAME):
-        encode_dct(listOfData[0])
+        encoded_data = encode_dct(listOfData[0])
     elif(frame_type == cfg.MESH_FRAME):
-        encode_mesh(listOfData[0], listOfData[1], listOfData[2])
+        encoded_data = encode_mesh(listOfData[0], listOfData[1], listOfData[2])
     elif(frame_type == cfg.MOTION_VECTORS_FRAME):
-        encode_mesh(0, 0, listOfData[0])
+        encoded_data = encode_mesh(0, 0, listOfData[0])
     elif(frame_type == cfg.END_FRAME):
         if cfg.ENCODER_MODE == 1:
             stat.GetProbability_GenerateHoffmanTable()
         pass # TODO: call Ramy function to end the file
 
-    return
+    return frame_type, encoded_data
 
 ############################################## Decoder #############################################################
 def decode():
@@ -135,19 +137,19 @@ if __name__ == "__main__":
         print("\n\n\ninput:")
         if(toggle):
             print(mesh_ip)
-            encoded_str = encode_mesh(mesh_ip)
+            frame_type, encoded_str = encode(cfg.MESH_FRAME, mesh_ip)
             print("\nencoded_str:")
             print(encoded_str)
             toggle = 0
-            # print("\noutput:")
-            # print(decode_mesh(encoded_str))
+            print("\noutput:")
+            print(rlc.decode_mesh(265,encoded_str))
         else:
             print(DCT_ip)
-            encoded_str = encode_dct(DCT_ip)
+            frame_type, encoded_str = encode(cfg.DCT_FRAME, [DCT_ip])
             print("\nencoded_str:")
             print(encoded_str)
             toggle = 1
-            # print("\noutput:")
-            # print(decode_dct(encoded_str))
+            print("\noutput:")
+            print(rlc.decode_dct(encoded_str[0], encoded_str[1]))
         # output
         # decode(encoded_str)
