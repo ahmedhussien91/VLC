@@ -1,5 +1,6 @@
 import configuration as cfg
 import numpy as np
+import random
 
 
 # this function should be called to generate the symbol-to-code dictionary for a specific frame type
@@ -7,8 +8,10 @@ import numpy as np
 #    [DCT_FRAME, MESH_FRAME, or MOTION_VECTORS_FRAME]
 #   "symbol_prob_dic" is the dictionary contains the symbols with its probabilities
 def generate_coding_dictionary(frame_type, symbol_prob_dic):
+    symbol_prob_dic = {k: v for k, v in sorted(symbol_prob_dic.items(), key=lambda item: item[1])}
     print("generate dic for type = " + str(frame_type))
-    print("symbol_prob_dic = " + str(type(symbol_prob_dic)))
+    print("symbol_prob_dic = " + str(symbol_prob_dic))
+    # print("symbol_prob_dic = " + str(sorted_symbol_dic))
 
 
 def load_coding_dictionaries():
@@ -19,9 +22,9 @@ def load_coding_dictionaries():
 #   "frame_type" is one of the types in configuration.py under the comment "Valid frame types"
 #   [DCT_FRAME, MESH_FRAME, or MOTION_VECTORS_FRAME]
 #   This function returns True if a new frame started successfully, False if there is already a frame opened to encode
-def begin_encoding(frame_type, box_size = 0):
+def begin_encoding(frame_type, box_size=0):
     print("frame started with type = " + str(frame_type))
-    print("box_size" + box_size)
+    print("box_size = " + str(box_size))
     return True
 
 
@@ -55,4 +58,16 @@ def decode():
 
 
 if __name__ == "__main__":
-    print(type(decode()[1][0][1]))
+    symbols_dic = {}
+    total_count = 0
+    total_prob = 0
+    for i in range(127):
+        symbols_dic[i] = random.randint(1, 1000)
+        total_count += symbols_dic[i]
+
+    for j in range(len(symbols_dic)):
+        symbols_dic[j] /= total_count
+        total_prob += symbols_dic[j]
+
+    generate_coding_dictionary(cfg.DCT_FRAME, symbols_dic)
+
