@@ -25,12 +25,15 @@ def load_coding_dictionaries():
 def begin_encoding(frame_type, box_size=0):
     print("frame started with type = " + str(frame_type))
     print("box_size = " + str(box_size))
+
     return True
 
 
 # this function must be called after finishing the frame to save it to the file and clean the frame
 def end_encoding():
     print("frame ended")
+	
+	return True
 
 
 # this function must be called between a call of begin_encoding(frame_type) and end_encoding
