@@ -83,16 +83,16 @@ def generate_coding_dictionary(frame_type, symbols_prob_dic):
 
     filename = ""
     if cfg.DCT_FRAME == frame_type:
-        filename = "dct_coding_dictionary.txt"
+        filename = "CodingDictionaries/dct_coding_dictionary.txt"
     elif cfg.MOTION_VECTORS_FRAME == frame_type or cfg.MESH_FRAME == frame_type:
-        filename = "motion_coding_dictionary.txt"
+        filename = "CodingDictionaries/motion_coding_dictionary.txt"
 
     with open(filename, 'w') as file:
         file.write(str([symbols_list, symbols_count_list, coding_list]))
 
 
 def load_coding_dictionaries():
-    filenames = ["dct_coding_dictionary.txt", "motion_coding_dictionary.txt"]
+    filenames = ["CodingDictionaries/dct_coding_dictionary.txt", "CodingDictionaries/motion_coding_dictionary.txt"]
 
     i = 0
     for filename in filenames:
@@ -209,8 +209,8 @@ def decode():
 
 
 def test_code_generation(frame_type, symbols_dictionary):
-    generate_coding_dictionary(cfg.DCT_FRAME, symbols_dictionary)
-    generate_coding_dictionary(cfg.MOTION_VECTORS_FRAME, symbols_dictionary)
+    # generate_coding_dictionary(cfg.DCT_FRAME, symbols_dictionary)
+    # generate_coding_dictionary(cfg.MOTION_VECTORS_FRAME, symbols_dictionary)
 
     load_coding_dictionaries()
 
