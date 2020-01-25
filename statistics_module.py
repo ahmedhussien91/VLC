@@ -74,13 +74,14 @@ def DoStatistics_DCT(encoded_dct_list):
 
 def GetProbability_GenerateHoffmanTable():
     for symbol, count in DCT_Symbols_count_dic.items():
-        DCT_Symbols_prob_dic[symbol] = DCT_Symbols_count_dic/DCT_total_symbols_count
+        DCT_Symbols_prob_dic[symbol] = count/DCT_total_symbols_count
     for symbol, count in meshVector_Symbols_count_dic.items():
-        meshVector_Symbols_prob_dic[symbol] = meshVector_Symbols_count_dic / meshVector_total_symbols_count
+        meshVector_Symbols_prob_dic[symbol] = count / meshVector_total_symbols_count
     for symbol, count in meshStruct_Symbols_count_dic.items():
-        meshStruct_Symbols_prob_dic[symbol] = meshStruct_Symbols_count_dic / meshStruct_total_symbols_count
+        meshStruct_Symbols_prob_dic[symbol] = count / meshStruct_total_symbols_count
 
     hoff.generate_coding_dictionary(cfg.DCT_FRAME, DCT_Symbols_prob_dic)
-    hoff.generate_coding_dictionary(cfg.MESH_FRAME, meshStruct_Symbols_prob_dic)
+    # hoff.generate_coding_dictionary(cfg.MESH_FRAME, meshStruct_Symbols_prob_dic)
     hoff.generate_coding_dictionary(cfg.MOTION_VECTORS_FRAME, meshVector_Symbols_prob_dic)
+
     return

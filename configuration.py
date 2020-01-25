@@ -50,7 +50,7 @@ INPUT_FILE_NAME = ""
 OUTPUT_FILE_NAME = ""
 
 # Encoder Mode
-ENCODER_MODE = 0
+ENCODER_MODE = 1
 
 # YUV format
 YUV_CONFIG = [4, 1, 1]
