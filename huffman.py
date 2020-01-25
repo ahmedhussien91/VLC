@@ -160,7 +160,7 @@ def encode(is_run_length_valid, data):
         current_encoding_dictionary = MOTION_VECTORS_KEY
 
     for i in range(0, len(data)):
-        if is_run_length_valid and (divmod(i, 2) == 0):
+        if is_run_length_valid and ((i % 2) == 0):
             CURRENT_FRAME += bitarray.bitarray(CODING_DICTIONARY[RUN_LENGTH_KEY][SYMBOLS_DICTIONARY[RUN_LENGTH_KEY].index(data[i])])
         else:
             CURRENT_FRAME += bitarray.bitarray(CODING_DICTIONARY[current_encoding_dictionary][SYMBOLS_DICTIONARY[current_encoding_dictionary].index(data[i])])
@@ -224,7 +224,7 @@ def test_code_generation(frame_type, symbols_dictionary):
 
     print("bit array = " + str(CURRENT_FRAME))
     begin_encoding(cfg.DCT_FRAME)
-    encode(False, np.array(['a', 'f', 'e']))
+    encode(True, np.array(['a', 'a', 'f', 'f', 'e', 'e']))
     with open("TestingOutput/test.bin", 'wb') as file:
         CURRENT_FRAME.tofile(file)
     end_encoding()
