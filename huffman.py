@@ -2,7 +2,7 @@ from networkx.algorithms.tree import coding
 
 import configuration as cfg
 import numpy as np
-import json
+import bitarray
 import random
 
 RUN_LENGTH_KEY = 0
@@ -20,6 +20,10 @@ CODING_DICTIONARY = {
     RUN_LENGTH_KEY: [],
     MOTION_VECTORS_KEY: []
 }
+
+CURRENT_FRAME_TYPE = cfg.DCT_FRAME
+CURRENT_FRAME = bitarray.bitarray()
+FRAME_OPENED = False
 
 def calculate_entropy(coding_list, symbols_count_list):
     entropy = 0
@@ -106,15 +110,33 @@ def load_coding_dictionaries():
 #   [DCT_FRAME, MESH_FRAME, or MOTION_VECTORS_FRAME]
 #   This function returns True if a new frame started successfully, False if there is already a frame opened to encode
 def begin_encoding(frame_type, box_size=0):
-    print("frame started with type = " + str(frame_type))
-    print("box_size = " + str(box_size))
+    global CURRENT_FRAME, CURRENT_FRAME_TYPE, FRAME_OPENED
+
+    if FRAME_OPENED:
+        print("Error: encoding frame already opened.")
+        return False
+
+    cfg.INITIAL_MESH_BLOCK_SIZE = box_size
+    CURRENT_FRAME_TYPE = frame_type
+    CURRENT_FRAME = bitarray.bitarray()
+    FRAME_OPENED = True
 
     return True
 
 
 # this function must be called after finishing the frame to save it to the file and clean the frame
 def end_encoding():
-    print("frame ended")
+    global CURRENT_FRAME, FRAME_OPENED
+
+    if not FRAME_OPENED:
+        print("Error: frame already closed.")
+        return False
+
+    ### To do save frame to file ###
+    print('encoded stream = ' + str(CURRENT_FRAME))
+
+    CURRENT_FRAME = bitarray.bitarray()
+    FRAME_OPENED = False
     
     return True
 
@@ -123,8 +145,27 @@ def end_encoding():
 # to attach the encoded data to the frame.
 #   "data" is a numpy array for the data to be encoded
 def encode(is_run_length_valid, data):
-    print("run length valid  = " + str(is_run_length_valid))
-    print("input shape = " + str(data.shape))
+    global FRAME_OPENED, CURRENT_FRAME, CURRENT_FRAME_TYPE
+
+    if not FRAME_OPENED:
+        print("Error: there is no frame opened for encoding.")
+        return -1
+
+    current_frame_size = len(CURRENT_FRAME)
+    current_encoding_dictionary = -1
+
+    if cfg.DCT_FRAME == CURRENT_FRAME_TYPE:
+        current_encoding_dictionary = RUN_LENGTH_KEY
+    elif cfg.MOTION_VECTORS_FRAME:
+        current_encoding_dictionary = MOTION_VECTORS_KEY
+
+    for i in range(0, len(data)):
+        if is_run_length_valid and (divmod(i, 2) == 0):
+            CURRENT_FRAME += bitarray.bitarray(CODING_DICTIONARY[RUN_LENGTH_KEY][SYMBOLS_DICTIONARY[RUN_LENGTH_KEY].index(data[i])])
+        else:
+            CURRENT_FRAME += bitarray.bitarray(CODING_DICTIONARY[current_encoding_dictionary][SYMBOLS_DICTIONARY[current_encoding_dictionary].index(data[i])])
+
+    return len(CURRENT_FRAME) - current_frame_size
 
 
 # this function returns the decoded frame type and the decoded data
@@ -135,6 +176,30 @@ def encode(is_run_length_valid, data):
 # length of the returned list will be 1 in case of DCT frame
 # and the number of the layers in case of mesh or motion vectors frames
 def decode():
+    data = bitarray.bitarray()
+    decoded_data = np.array([])
+
+    decoding_dictionary = RUN_LENGTH_KEY
+
+    with open('TestingOutput/test.bin', 'rb') as file:
+        data.fromfile(file)
+
+    index = -1
+    code = ''
+    for bit in data:
+        if bit:
+            code += '1'
+        else:
+            code += '0'
+
+        if CODING_DICTIONARY[decoding_dictionary].count(code) == 1:
+            index = CODING_DICTIONARY[decoding_dictionary].index(code)
+            decoded_data = np.append(decoded_data, SYMBOLS_DICTIONARY[decoding_dictionary][index])
+            code = ''
+            index = -1
+
+    print("decoded_data = " + str(decoded_data))
+
     frame_type = 0
     data = [[True, np.array([5, 0, 6, 1, 10, 0])],
             [False, np.array([0, 1, 0, 1, 0, 1])],
@@ -144,8 +209,8 @@ def decode():
 
 
 def test_code_generation(frame_type, symbols_dictionary):
-    # generate_coding_dictionary(cfg.DCT_FRAME, symbols_dictionary)
-    # generate_coding_dictionary(cfg.MOTION_VECTORS_FRAME, symbols_dictionary)
+    generate_coding_dictionary(cfg.DCT_FRAME, symbols_dictionary)
+    generate_coding_dictionary(cfg.MOTION_VECTORS_FRAME, symbols_dictionary)
 
     load_coding_dictionaries()
 
@@ -156,6 +221,15 @@ def test_code_generation(frame_type, symbols_dictionary):
     print("entropy = " + str(calculate_entropy(CODING_DICTIONARY[0], SYMBOLS_COUNT_DICTIONARY[0])))
     print("var = " + str(np.array(SYMBOLS_COUNT_DICTIONARY[0]).std()))
     print("mean = " + str(np.mean(SYMBOLS_COUNT_DICTIONARY[0])))
+
+    print("bit array = " + str(CURRENT_FRAME))
+    begin_encoding(cfg.DCT_FRAME)
+    encode(False, np.array(['a', 'f', 'e']))
+    with open("TestingOutput/test.bin", 'wb') as file:
+        CURRENT_FRAME.tofile(file)
+    end_encoding()
+
+    decode()
 
 
 if __name__ == "__main__":
