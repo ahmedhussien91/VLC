@@ -69,7 +69,11 @@ def DoStatistics_DCT(encoded_dct_list):
                 DCT_Symbols_count_dic[symbol] = DCT_Symbols_count_dic[symbol] + count
             else:
                 DCT_Symbols_count_dic[symbol] = count
-
+    for x in range(128):
+        if x in DCT_Symbols_count_dic:
+            pass
+        else:
+            DCT_Symbols_count_dic[x] = 1
     return
 
 
