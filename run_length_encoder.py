@@ -107,25 +107,22 @@ def encode_meshVectors(data_np_arr_list):
 
 
 def encode_dct(data_np_arr_list):
-    encoded_dct = []
-    is_run_length_valid = True
-    concatenated_dct = []
+    is_run_length_valid = []
     concatenated_encoded_dct = []
 
     # concatenate the dct
-    for x in list(data_np_arr_list):
-        encoded_dct = encode(x)
+    for dct in list(data_np_arr_list):
         # Do Run length coding
-        concatenated_encoded_dct = concatenated_encoded_dct + encoded_dct
-        # concatenated_dct = concatenated_dct + list(x)
+        encoded_dct = encode(dct)
 
-
-    # if len(concatenated_dct) < len(concatenated_encoded_dct):
-    #     is_run_length_valid = False
-    #     concatenated_encoded_dct = concatenated_dct
-    #     stat.DCT_isRunLenghtCodingValid_InValidcount = stat.DCT_isRunLenghtCodingValid_InValidcount + 1
-    # else:
-    #     stat.DCT_isRunLenghtCodingValid_Validcount = stat.DCT_isRunLenghtCodingValid_Validcount + 1
+        if len(dct) < len(encoded_dct):
+            is_run_length_valid.append(False)
+            concatenated_encoded_dct.append(np.array(dct))
+            stat.DCT_isRunLenghtCodingValid_InValidcount = stat.DCT_isRunLenghtCodingValid_InValidcount + 1
+        else:
+            stat.DCT_isRunLenghtCodingValid_Validcount = stat.DCT_isRunLenghtCodingValid_Validcount + 1
+            concatenated_encoded_dct.append(encoded_dct)
+            is_run_length_valid.append(True)
 
     return concatenated_encoded_dct, is_run_length_valid
 

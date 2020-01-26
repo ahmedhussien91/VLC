@@ -62,12 +62,13 @@ def DoStatistics_DCT(encoded_dct_list):
     DCT_Total_Count = DCT_Total_Count + 1
     # Huffman
     ## count the total number of symbols then count unique symbols then append on dictionary
-    DCT_total_symbols_count = DCT_total_symbols_count + len(encoded_dct_list)
-    for symbol, count in col.Counter(encoded_dct_list).items():
-        if symbol in DCT_Symbols_count_dic:
-            DCT_Symbols_count_dic[symbol] = DCT_Symbols_count_dic[symbol] + count
-        else:
-            DCT_Symbols_count_dic[symbol] = count
+    for encoded_dct in encoded_dct_list:
+        DCT_total_symbols_count = DCT_total_symbols_count + len(encoded_dct)
+        for symbol, count in col.Counter(encoded_dct).items():
+            if symbol in DCT_Symbols_count_dic:
+                DCT_Symbols_count_dic[symbol] = DCT_Symbols_count_dic[symbol] + count
+            else:
+                DCT_Symbols_count_dic[symbol] = count
 
     return
 

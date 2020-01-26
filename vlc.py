@@ -83,7 +83,8 @@ def encode_dct(quantized_dct_list):
     if cfg.ENCODER_MODE == 0:
         huff.load_coding_dictionaries()
         huff.begin_encoding(frame_type)
-        huff.encode(is_runlength_valid, np.array(encoded_dct))
+        for i, encoded_dct_e in enumerate(encoded_dct):
+            huff.encode(is_runlength_valid[i], encoded_dct[i])
         huff.end_encoding()
 
     return [is_runlength_valid, encoded_dct]
