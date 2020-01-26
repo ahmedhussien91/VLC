@@ -26,7 +26,7 @@ def encode(text):
     result = []
 
     for character in text:
-        if character != previous:
+        if (character != previous) or (count == 127) :
             if previous != None:
                 result.append(int(count))
                 result.append(int(character))
