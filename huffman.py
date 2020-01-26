@@ -3,6 +3,7 @@ from networkx.algorithms.tree import coding
 import configuration as cfg
 import numpy as np
 import bitarray
+import time
 import random
 
 RUN_LENGTH_KEY = 0
@@ -16,9 +17,14 @@ SYMBOLS_COUNT_DICTIONARY = {
     RUN_LENGTH_KEY: [],
     MOTION_VECTORS_KEY: []
 }
-CODING_DICTIONARY = {
+CODING_LISTS = {
     RUN_LENGTH_KEY: [],
     MOTION_VECTORS_KEY: []
+}
+
+CODING_DICTIONARIES = {
+    RUN_LENGTH_KEY: {},
+    MOTION_VECTORS_KEY: {}
 }
 
 CURRENT_FRAME_TYPE = cfg.DCT_FRAME
@@ -101,7 +107,11 @@ def load_coding_dictionaries():
 
             SYMBOLS_DICTIONARY[i] = coding_dictionary_lists[0]
             SYMBOLS_COUNT_DICTIONARY[i] = coding_dictionary_lists[1]
-            CODING_DICTIONARY[i] = coding_dictionary_lists[2]
+            CODING_LISTS[i] = coding_dictionary_lists[2]
+
+            for index in range(len(SYMBOLS_DICTIONARY[i])):
+                CODING_DICTIONARIES[i][SYMBOLS_DICTIONARY[i][index]] = bitarray.bitarray(CODING_LISTS[i][index])
+
         i += 1
 
 
@@ -159,11 +169,13 @@ def encode(is_run_length_valid, data):
     elif cfg.MOTION_VECTORS_FRAME:
         current_encoding_dictionary = MOTION_VECTORS_KEY
 
-    for i in range(0, len(data)):
-        if is_run_length_valid and ((i % 2) == 0):
-            CURRENT_FRAME += bitarray.bitarray(CODING_DICTIONARY[RUN_LENGTH_KEY][SYMBOLS_DICTIONARY[RUN_LENGTH_KEY].index(data[i])])
-        else:
-            CURRENT_FRAME += bitarray.bitarray(CODING_DICTIONARY[current_encoding_dictionary][SYMBOLS_DICTIONARY[current_encoding_dictionary].index(data[i])])
+    CURRENT_FRAME.encode(CODING_DICTIONARIES[current_encoding_dictionary], data)
+
+    # for i in range(0, len(data)):
+    #     if is_run_length_valid and ((i % 2) == 0):
+    #         CURRENT_FRAME += bitarray.bitarray(CODING_LISTS[RUN_LENGTH_KEY][SYMBOLS_DICTIONARY[RUN_LENGTH_KEY].index(data[i])])
+    #     else:
+    #         CURRENT_FRAME += bitarray.bitarray(CODING_LISTS[current_encoding_dictionary][SYMBOLS_DICTIONARY[current_encoding_dictionary].index(data[i])])
 
     return len(CURRENT_FRAME) - current_frame_size
 
@@ -192,8 +204,8 @@ def decode():
         else:
             code += '0'
 
-        if CODING_DICTIONARY[decoding_dictionary].count(code) == 1:
-            index = CODING_DICTIONARY[decoding_dictionary].index(code)
+        if CODING_LISTS[decoding_dictionary].count(code) == 1:
+            index = CODING_LISTS[decoding_dictionary].index(code)
             decoded_data = np.append(decoded_data, SYMBOLS_DICTIONARY[decoding_dictionary][index])
             code = ''
             index = -1
@@ -216,18 +228,24 @@ def test_code_generation(frame_type, symbols_dictionary):
 
     for i in range(0, len(SYMBOLS_DICTIONARY[0])):
         print('[' + str(SYMBOLS_COUNT_DICTIONARY[0][i]) + ', ' + str(SYMBOLS_DICTIONARY[0][i]) + ']: ' +
-              str(CODING_DICTIONARY[0][i]))
+              str(CODING_LISTS[0][i]))
         
-    print("entropy = " + str(calculate_entropy(CODING_DICTIONARY[0], SYMBOLS_COUNT_DICTIONARY[0])))
+    print("entropy = " + str(calculate_entropy(CODING_LISTS[0], SYMBOLS_COUNT_DICTIONARY[0])))
     print("var = " + str(np.array(SYMBOLS_COUNT_DICTIONARY[0]).std()))
     print("mean = " + str(np.mean(SYMBOLS_COUNT_DICTIONARY[0])))
 
-    print("bit array = " + str(CURRENT_FRAME))
+    data_to_encode = np.array(['a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e'])
+
+    time_start = time.time()
     begin_encoding(cfg.DCT_FRAME)
-    encode(True, np.array(['a', 'a', 'f', 'f', 'e', 'e']))
+    encode(True, data_to_encode)
     with open("TestingOutput/test.bin", 'wb') as file:
         CURRENT_FRAME.tofile(file)
     end_encoding()
+    time_end = time.time()
+
+    print("consumed time = " + str(time_end - time_start))
+    print("number of elements to encode = " + str(len(data_to_encode)))
 
     decode()
 
