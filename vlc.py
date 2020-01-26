@@ -38,6 +38,10 @@ def init_encoder(output_filename, frame_resolution=None, yuv_config=None, encode
         "Error: YUV values must be from 0 to 4"
     cfg.YUV_CONFIG = yuv_config
     cfg.ENCODER_MODE = encoder_mode
+    # add configuration to header
+    huff.add_header()
+    return
+
 # this function must be called before decoding.
 #   "input_filename" the input file path of the file to be decoded
 def init_decoder(input_filename):
@@ -84,7 +88,7 @@ def encode_dct(quantized_dct_list):
         huff.load_coding_dictionaries()
         huff.begin_encoding(frame_type)
         for i, encoded_dct_e in enumerate(encoded_dct):
-            huff.encode(is_runlength_valid[i], encoded_dct[i])
+            huff.encode(is_runlength_valid[i], encoded_dct_e)
         huff.end_encoding()
 
     return [is_runlength_valid, encoded_dct]
@@ -96,6 +100,7 @@ def encode_dct(quantized_dct_list):
                     for end of file reached no data required
 '''
 def encode(frame_type, listOfData):
+
 
     if(frame_type == cfg.DCT_FRAME):
         encoded_data = encode_dct(listOfData[0])

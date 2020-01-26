@@ -37,7 +37,7 @@ def calculate_entropy(coding_list, symbols_count_list):
 def num_to_bitarr(num, no_of_bits=0):
     if 0 == no_of_bits:
         bitarr = bitarray.bitarray(str(bin(num)).lstrip('0b'))
-    elif len(str(bin(num)).lstrip('0b')) < no_of_bits:
+    elif len(str(bin(num)).lstrip('0b')) <= no_of_bits:
         zero_bits_num  = no_of_bits - len(str(bin(num)).lstrip('0b'))
         bitarr = bitarray.bitarray(zero_bits_num*[False])
         bitarr.extend(str(bin(num)).lstrip('0b'))
