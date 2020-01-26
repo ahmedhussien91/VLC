@@ -9,6 +9,7 @@ import configuration as cfg
 import collections as col
 import statistics_module as stat
 import SystemInputSimulation as sysin
+import time
 
 
 # ############################ Initialization Part ############################
@@ -83,13 +84,17 @@ def encode_dct(quantized_dct_list):
     # Do statistics on symbols
     stat.DoStatistics_DCT(encoded_dct)
 
+    huffman_start_time = time.time()
     # Call the hoffman with the agreed sequance
     if cfg.ENCODER_MODE == 0:
+        print("calling huffman encoding .........")
         huff.load_coding_dictionaries()
         huff.begin_encoding(frame_type)
         for i, encoded_dct_e in enumerate(encoded_dct):
             huff.encode(is_runlength_valid[i], encoded_dct_e)
         huff.end_encoding()
+    huffman_end_time = time.time()
+    print("huffman encoding time = " + str(huffman_end_time - huffman_start_time))
 
     return [is_runlength_valid, encoded_dct]
 
@@ -100,7 +105,6 @@ def encode_dct(quantized_dct_list):
                     for end of file reached no data required
 '''
 def encode(frame_type, listOfData):
-
 
     if(frame_type == cfg.DCT_FRAME):
         encoded_data = encode_dct(listOfData[0])
@@ -131,6 +135,11 @@ def decode():
         pass  # TODO: call Ramy function to end the file
 
     return frame_type, decoded_data
+
+
+def f(x):
+    return x*x
+
 
 if __name__ == "__main__":
     # toggle = 0
@@ -164,10 +173,17 @@ if __name__ == "__main__":
 
     # ###################### DCT with System simulation #################################
     init_encoder("output", frame_resolution=None, yuv_config=None, encoder_mode=0)
+
+    dct_start_time = time.time()
     DCT_ip = sysin.sim_DCT_in()
-    print(DCT_ip)
+    dct_end_time = time.time()
+    print("dct time  = " + str(dct_end_time - dct_start_time))
+    # print(DCT_ip)
+
+    total_encoding_start_time = time.time()
     frame_type, encoded_str = encode(cfg.DCT_FRAME, [DCT_ip])
-    print("\nencoded_str:")
-    print(encoded_str)
-    print("\noutput:")
-    print(rlc.decode_dct(encoded_str[0], encoded_str[1]))
+    total_encoding_end_time = time.time()
+    print("total encoding time  = " + str(total_encoding_end_time - total_encoding_start_time))
+    # print("\nencoded_str:")
+    # print(encoded_str)
+

@@ -76,8 +76,8 @@ def sim_DCT_in():
     imgcv1_y = np.uint8(dct_y*255.0)    # convert back
     imgcv1_u = np.uint8(dct_u*255.0)    # convert back
     imgcv1_v = np.uint8(dct_v*255.0)    # convert back
-    imy_S = cv2.resize(imgcv1_y, (960, 540))
-    cv2.imshow('Display frame', imy_S)
+    # imy_S = cv2.resize(imgcv1_y, (960, 540))
+    # cv2.imshow('Display frame', imy_S)
     # cv2.waitKey(0)
 
     ####### ZIZAG ###############

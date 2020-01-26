@@ -1,5 +1,3 @@
-from networkx.algorithms.tree import coding
-
 import configuration as cfg
 import numpy as np
 import bitarray
@@ -31,6 +29,7 @@ CURRENT_FRAME_TYPE = cfg.DCT_FRAME
 CURRENT_FRAME = bitarray.bitarray()
 FRAME_OPENED = False
 
+
 def calculate_entropy(coding_list, symbols_count_list):
     entropy = 0
     total_count = sum(symbols_count_list)
@@ -40,17 +39,19 @@ def calculate_entropy(coding_list, symbols_count_list):
 
     return entropy
 
+
 def num_to_bitarr(num, no_of_bits=0):
     if 0 == no_of_bits:
         bitarr = bitarray.bitarray(str(bin(num)).lstrip('0b'))
     elif len(str(bin(num)).lstrip('0b')) <= no_of_bits:
-        zero_bits_num  = no_of_bits - len(str(bin(num)).lstrip('0b'))
-        bitarr = bitarray.bitarray(zero_bits_num*[False])
+        zero_bits_num = no_of_bits - len(str(bin(num)).lstrip('0b'))
+        bitarr = bitarray.bitarray(zero_bits_num * [False])
         bitarr.extend(str(bin(num)).lstrip('0b'))
     else:
         assert False, "Casting Failed"
 
     return bitarr
+
 
 def bitarr_to_num(bitarr):
     num = int(bitarr.to01(), 2)
@@ -59,8 +60,8 @@ def bitarr_to_num(bitarr):
 
 def add_header():
     global CURRENT_FRAME
-    CURRENT_FRAME += num_to_bitarr(cfg.FRAME_RESOLUTION[0],16)
-    CURRENT_FRAME += num_to_bitarr(cfg.FRAME_RESOLUTION[1],16)
+    CURRENT_FRAME += num_to_bitarr(cfg.FRAME_RESOLUTION[0], 16)
+    CURRENT_FRAME += num_to_bitarr(cfg.FRAME_RESOLUTION[1], 16)
     CURRENT_FRAME += num_to_bitarr(cfg.YUV_CONFIG[0], 3)
     CURRENT_FRAME += num_to_bitarr(cfg.YUV_CONFIG[1], 3)
     CURRENT_FRAME += num_to_bitarr(cfg.YUV_CONFIG[2], 3)
@@ -76,7 +77,7 @@ def generate_huffman_coding(symbols_prob_dic):
     symbols_count_list = []
 
     for key, value in symbols_prob_dic.items():
-        merge_symbols_dic[(key, )] = value
+        merge_symbols_dic[(key,)] = value
         symbols_list.append(key)
         coding_list.append('')
         symbols_count_list.append(value)
@@ -88,23 +89,23 @@ def generate_huffman_coding(symbols_prob_dic):
         bit = '1'
         new_key = ()
         new_prob = 0.0
-        
+
         for item in list(merge_symbols_dic.items()):
             new_key = item[0] + new_key
             new_prob += item[1]
 
             for symbol in item[0]:
                 coding_list[symbols_list.index(symbol)] = bit + coding_list[symbols_list.index(symbol)]
-            
+
             del merge_symbols_dic[item[0]]
-            
+
             if '1' == bit:
                 bit = '0'
             else:
                 break
 
         merge_symbols_dic[new_key] = new_prob
-    
+
     return symbols_list, symbols_count_list, coding_list
 
 
@@ -171,12 +172,23 @@ def end_encoding():
         return False
 
     ### To do save frame to file ###
-    print('encoded stream = ' + str(CURRENT_FRAME))
+    print('encoded stream = ' + str(len(CURRENT_FRAME)))
+    with open(cfg.INPUT_FILE_NAME, 'wb') as file:
+        CURRENT_FRAME.tofile(file)
 
     CURRENT_FRAME = bitarray.bitarray()
     FRAME_OPENED = False
-    
+
     return True
+
+
+def encode_symbol(is_run_length_valid, symbol, index, current_encoding_dictionary):
+    global CURRENT_FRAME
+
+    if is_run_length_valid and ((index % 2) == 0):
+        CURRENT_FRAME += CODING_DICTIONARIES[RUN_LENGTH_KEY][symbol]
+    else:
+        CURRENT_FRAME += CODING_DICTIONARIES[current_encoding_dictionary][symbol]
 
 
 # this function must be called between a call of begin_encoding(frame_type) and end_encoding
@@ -197,13 +209,8 @@ def encode(is_run_length_valid, data):
     elif cfg.MOTION_VECTORS_FRAME:
         current_encoding_dictionary = MOTION_VECTORS_KEY
 
-    CURRENT_FRAME.encode(CODING_DICTIONARIES[current_encoding_dictionary], data)
-
-    # for i in range(0, len(data)):
-    #     if is_run_length_valid and ((i % 2) == 0):
-    #         CURRENT_FRAME += bitarray.bitarray(CODING_LISTS[RUN_LENGTH_KEY][SYMBOLS_DICTIONARY[RUN_LENGTH_KEY].index(data[i])])
-    #     else:
-    #         CURRENT_FRAME += bitarray.bitarray(CODING_LISTS[current_encoding_dictionary][SYMBOLS_DICTIONARY[current_encoding_dictionary].index(data[i])])
+    for i in range(0, len(data)):
+        encode_symbol(is_run_length_valid, data[i], i, current_encoding_dictionary)
 
     return len(CURRENT_FRAME) - current_frame_size
 
@@ -221,7 +228,7 @@ def decode():
 
     decoding_dictionary = RUN_LENGTH_KEY
 
-    with open('TestingOutput/test.bin', 'rb') as file:
+    with open(cfg.OUTPUT_FILE_NAME, 'rb') as file:
         data.fromfile(file)
 
     index = -1
@@ -257,12 +264,99 @@ def test_code_generation(frame_type, symbols_dictionary):
     for i in range(0, len(SYMBOLS_DICTIONARY[0])):
         print('[' + str(SYMBOLS_COUNT_DICTIONARY[0][i]) + ', ' + str(SYMBOLS_DICTIONARY[0][i]) + ']: ' +
               str(CODING_LISTS[0][i]))
-        
+
     print("entropy = " + str(calculate_entropy(CODING_LISTS[0], SYMBOLS_COUNT_DICTIONARY[0])))
     print("var = " + str(np.array(SYMBOLS_COUNT_DICTIONARY[0]).std()))
     print("mean = " + str(np.mean(SYMBOLS_COUNT_DICTIONARY[0])))
 
-    data_to_encode = np.array(['a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e'])
+    data_to_encode = np.array(
+        ['a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e',
+         'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f',
+         'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a',
+         'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e', 'a', 'a', 'f', 'f', 'e', 'e'])
 
     time_start = time.time()
     begin_encoding(cfg.DCT_FRAME)
