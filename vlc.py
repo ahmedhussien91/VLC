@@ -8,6 +8,7 @@ import numpy as np
 import configuration as cfg
 import collections as col
 import statistics_module as stat
+import SystemInputSimulation as sysin
 
 
 # ############################ Initialization Part ############################
@@ -20,9 +21,9 @@ import statistics_module as stat
 #                       1 -> generate DictionaryFile for hoffman probabilities
 def init_encoder(output_filename, frame_resolution=None, yuv_config=None, encoder_mode=0):
     if frame_resolution is None:
-        frame_resolution = [3840, 2160]
+        frame_resolution = [4096, 2160]
     if yuv_config is None:
-        yuv_config = [4, 1, 1]
+        yuv_config = [4, 4, 4]
 
     assert ("" != output_filename), "Error: output file name could not be an empty string."
     cfg.OUTPUT_FILE_NAME = output_filename
@@ -37,6 +38,10 @@ def init_encoder(output_filename, frame_resolution=None, yuv_config=None, encode
         "Error: YUV values must be from 0 to 4"
     cfg.YUV_CONFIG = yuv_config
     cfg.ENCODER_MODE = encoder_mode
+    # add configuration to header
+    huff.add_header()
+    return
+
 # this function must be called before decoding.
 #   "input_filename" the input file path of the file to be decoded
 def init_decoder(input_filename):
@@ -80,8 +85,10 @@ def encode_dct(quantized_dct_list):
 
     # Call the hoffman with the agreed sequance
     if cfg.ENCODER_MODE == 0:
+        huff.load_coding_dictionaries()
         huff.begin_encoding(frame_type)
-        huff.encode(is_runlength_valid, np.array(encoded_dct))
+        for i, encoded_dct_e in enumerate(encoded_dct):
+            huff.encode(is_runlength_valid[i], encoded_dct_e)
         huff.end_encoding()
 
     return [is_runlength_valid, encoded_dct]
@@ -94,6 +101,7 @@ def encode_dct(quantized_dct_list):
 '''
 def encode(frame_type, listOfData):
 
+
     if(frame_type == cfg.DCT_FRAME):
         encoded_data = encode_dct(listOfData[0])
     elif(frame_type == cfg.MESH_FRAME):
@@ -101,9 +109,9 @@ def encode(frame_type, listOfData):
     elif(frame_type == cfg.MOTION_VECTORS_FRAME):
         encoded_data = encode_mesh(0, 0, listOfData[0])
     elif(frame_type == cfg.END_FRAME):
-        if cfg.ENCODER_MODE == 1:
-            stat.GetProbability_GenerateHoffmanTable()
         pass # TODO: call Ramy function to end the file
+    if cfg.ENCODER_MODE == 1:
+        stat.GetProbability_GenerateHoffmanTable()
 
     return frame_type, encoded_data
 
@@ -125,31 +133,41 @@ def decode():
     return frame_type, decoded_data
 
 if __name__ == "__main__":
-    toggle = 0
-    while (1):
-        # input
-        # DCT
-        DCT_ip = [np.random.randint(cfg.runlenght_config[cfg.DCT]["SYMBOLS_COUNT"],size=cfg.NO_OF_DCT_BLOCKS),np.random.randint(cfg.runlenght_config[cfg.DCT]["SYMBOLS_COUNT"]
-        ,size=int(cfg.NO_OF_DCT_BLOCKS/4)),np.random.randint(cfg.runlenght_config[cfg.DCT]["SYMBOLS_COUNT"], size=int(cfg.NO_OF_DCT_BLOCKS/4))]
-        # mesh
-        mesh_struct =  [np.random.randint(2,size=cfg.LAYER1_MESH_STRUCT_SIZE), np.random.randint(2,size=cfg.LAYER1_MESH_STRUCT_SIZE*4), np.random.randint(2,size=cfg.LAYER1_MESH_STRUCT_SIZE*4)]
-        mesh_ip = [256,mesh_struct,[np.random.randint(-7,7,size = col.Counter(mesh_struct[0])[1]), np.random.randint(-7,7,size = col.Counter(mesh_struct[1])[1]), np.random.randint(-7,7,size = col.Counter(mesh_struct[2])[1])]]
-        print("\n\n\ninput:")
-        if(toggle):
-            print(mesh_ip)
-            frame_type, encoded_str = encode(cfg.MOTION_VECTORS_FRAME, mesh_ip)
-            print("\nencoded_str:")
-            print(encoded_str)
-            toggle = 0
-            print("\noutput:")
-            print(rlc.decode_mesh(265,encoded_str))
-        else:
-            print(DCT_ip)
-            frame_type, encoded_str = encode(cfg.DCT_FRAME, [DCT_ip])
-            print("\nencoded_str:")
-            print(encoded_str)
-            toggle = 1
-            print("\noutput:")
-            print(rlc.decode_dct(encoded_str[0], encoded_str[1]))
-        # output
-        # decode(encoded_str)
+    # toggle = 0
+    # while (1):
+    #     # input
+    #     # DCT
+    #     DCT_ip = [np.random.randint(cfg.runlenght_config[cfg.DCT]["SYMBOLS_COUNT"],size=cfg.NO_OF_DCT_BLOCKS),np.random.randint(cfg.runlenght_config[cfg.DCT]["SYMBOLS_COUNT"]
+    #     ,size=int(cfg.NO_OF_DCT_BLOCKS)),np.random.randint(cfg.runlenght_config[cfg.DCT]["SYMBOLS_COUNT"], size=int(cfg.NO_OF_DCT_BLOCKS))]
+    #     # mesh
+    #     mesh_struct =  [np.random.randint(2,size=cfg.LAYER1_MESH_STRUCT_SIZE), np.random.randint(2,size=cfg.LAYER1_MESH_STRUCT_SIZE*4), np.random.randint(2,size=cfg.LAYER1_MESH_STRUCT_SIZE*4)]
+    #     mesh_ip = [256,mesh_struct,[np.random.randint(-7,7,size = col.Counter(mesh_struct[0])[1]), np.random.randint(-7,7,size = col.Counter(mesh_struct[1])[1]), np.random.randint(-7,7,size = col.Counter(mesh_struct[2])[1])]]
+    #     print("\n\n\ninput:")
+    #     if(toggle):
+    #         print(mesh_ip)
+    #         frame_type, encoded_str = encode(cfg.MOTION_VECTORS_FRAME, mesh_ip)
+    #         print("\nencoded_str:")
+    #         print(encoded_str)
+    #         toggle = 0
+    #         print("\noutput:")
+    #         print(rlc.decode_mesh(265,encoded_str))
+    #     else:
+    #         print(DCT_ip)
+    #         frame_type, encoded_str = encode(cfg.DCT_FRAME, [DCT_ip])
+    #         print("\nencoded_str:")
+    #         print(encoded_str)
+    #         toggle = 1
+    #         print("\noutput:")
+    #         print(rlc.decode_dct(encoded_str[0], encoded_str[1]))
+    #     # output
+    #     # decode(encoded_str)
+
+    # ###################### DCT with System simulation #################################
+    init_encoder("output", frame_resolution=None, yuv_config=None, encoder_mode=0)
+    DCT_ip = sysin.sim_DCT_in()
+    print(DCT_ip)
+    frame_type, encoded_str = encode(cfg.DCT_FRAME, [DCT_ip])
+    print("\nencoded_str:")
+    print(encoded_str)
+    print("\noutput:")
+    print(rlc.decode_dct(encoded_str[0], encoded_str[1]))

@@ -40,6 +40,34 @@ def calculate_entropy(coding_list, symbols_count_list):
 
     return entropy
 
+def num_to_bitarr(num, no_of_bits=0):
+    if 0 == no_of_bits:
+        bitarr = bitarray.bitarray(str(bin(num)).lstrip('0b'))
+    elif len(str(bin(num)).lstrip('0b')) <= no_of_bits:
+        zero_bits_num  = no_of_bits - len(str(bin(num)).lstrip('0b'))
+        bitarr = bitarray.bitarray(zero_bits_num*[False])
+        bitarr.extend(str(bin(num)).lstrip('0b'))
+    else:
+        assert False, "Casting Failed"
+
+    return bitarr
+
+def bitarr_to_num(bitarr):
+    num = int(bitarr.to01(), 2)
+    return num
+
+
+def add_header():
+    global CURRENT_FRAME
+    CURRENT_FRAME += num_to_bitarr(cfg.FRAME_RESOLUTION[0],16)
+    CURRENT_FRAME += num_to_bitarr(cfg.FRAME_RESOLUTION[1],16)
+    CURRENT_FRAME += num_to_bitarr(cfg.YUV_CONFIG[0], 3)
+    CURRENT_FRAME += num_to_bitarr(cfg.YUV_CONFIG[1], 3)
+    CURRENT_FRAME += num_to_bitarr(cfg.YUV_CONFIG[2], 3)
+    # TODO: add number of frames @ the end or we can end the frame with a code that is not a part of huffman code
+    return
+
+
 def generate_huffman_coding(symbols_prob_dic):
     symbols_prob_dic = {key: value for key, value in sorted(symbols_prob_dic.items(), key=lambda item: item[1])}
     merge_symbols_dic = {}

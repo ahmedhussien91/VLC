@@ -23,24 +23,20 @@ def encode(text):
 
     count = 1
     previous = None
-    mapping = list()
+    result = []
 
     for character in text:
         if character != previous:
             if previous != None:
-                mapping.append((previous, count))
+                result.append(int(count))
+                result.append(int(character))
             count = 1
             previous = character
         else:
             count += 1
     else:
-        mapping.append((character, count))
-
-    result = []
-
-    for character, count in mapping:
-            result.append(int(count))
-            result.append(int(character))
+        result.append(int(count))
+        result.append(int(character))
 
     return result
 
@@ -111,23 +107,24 @@ def encode_meshVectors(data_np_arr_list):
 
 
 def encode_dct(data_np_arr_list):
-    encoded_dct = []
     is_run_length_valid = []
-    concatenated_dct = []
+    concatenated_encoded_dct = []
 
     # concatenate the dct
-    for x in list(data_np_arr_list):
-        concatenated_dct = concatenated_dct + list(x)
-    # Do Run length coding
-    encoded_dct = encode(concatenated_dct)
-    if len(concatenated_dct) < len(encoded_dct):
-        is_run_length_valid = False
-        encoded_dct = concatenated_dct
-        stat.DCT_isRunLenghtCodingValid_InValidcount = stat.DCT_isRunLenghtCodingValid_InValidcount + 1
-    else:
-        stat.DCT_isRunLenghtCodingValid_Validcount = stat.DCT_isRunLenghtCodingValid_Validcount + 1
+    for dct in list(data_np_arr_list):
+        # Do Run length coding
+        encoded_dct = encode(dct)
 
-    return encoded_dct, is_run_length_valid
+        if len(dct) < len(encoded_dct):
+            is_run_length_valid.append(False)
+            concatenated_encoded_dct.append(np.array(dct))
+            stat.DCT_isRunLenghtCodingValid_InValidcount = stat.DCT_isRunLenghtCodingValid_InValidcount + 1
+        else:
+            stat.DCT_isRunLenghtCodingValid_Validcount = stat.DCT_isRunLenghtCodingValid_Validcount + 1
+            concatenated_encoded_dct.append(encoded_dct)
+            is_run_length_valid.append(True)
+
+    return concatenated_encoded_dct, is_run_length_valid
 
 
 ######################################### Decoder ###################################################################
