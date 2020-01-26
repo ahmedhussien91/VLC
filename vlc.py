@@ -9,6 +9,7 @@ import configuration as cfg
 import collections as col
 import statistics_module as stat
 import SystemInputSimulation as sysin
+import time
 
 
 # ############################ Initialization Part ############################
@@ -83,13 +84,16 @@ def encode_dct(quantized_dct_list):
     # Do statistics on symbols
     stat.DoStatistics_DCT(encoded_dct)
 
+    huffman_start_time = time.time()
     # Call the hoffman with the agreed sequance
     if cfg.ENCODER_MODE == 0:
-        huff.load_coding_dictionaries()
+        print("calling huffman encoding .........")
         huff.begin_encoding(frame_type)
         for i, encoded_dct_e in enumerate(encoded_dct):
             huff.encode(is_runlength_valid[i], encoded_dct_e)
         huff.end_encoding()
+    huffman_end_time = time.time()
+    print("huffman encoding time = " + str(huffman_end_time - huffman_start_time))
 
     return [is_runlength_valid, encoded_dct]
 
@@ -100,8 +104,8 @@ def encode_dct(quantized_dct_list):
                     for end of file reached no data required
 '''
 def encode(frame_type, listOfData):
-
-
+    if cfg.ENCODER_MODE == 0:
+        huff.load_coding_dictionaries()
     if(frame_type == cfg.DCT_FRAME):
         encoded_data = encode_dct(listOfData[0])
     elif(frame_type == cfg.MESH_FRAME):
@@ -121,7 +125,7 @@ def decode():
     frame_type, box_size, listOfData = huff.decode()
     # run length
     if (frame_type == cfg.DCT_FRAME):
-        decoded_data = rlc.decode_dct(listOfData[0][0], listOfData[0][1])
+        decoded_data = rlc.decode_dct(listOfData)
     elif (frame_type == cfg.MESH_FRAME):
         initial_mesh_block_size = box_size
         decoded_data = rlc.decode_mesh(initial_mesh_block_size, listOfData)
@@ -132,6 +136,11 @@ def decode():
 
     return frame_type, decoded_data
 
+
+def f(x):
+    return x*x
+
+
 if __name__ == "__main__":
     init_encoder("output", frame_resolution=None, yuv_config=None, encoder_mode=0)
     ############# mesh input simulation ############################
@@ -139,7 +148,10 @@ if __name__ == "__main__":
     mesh_ip = [256,mesh_struct,[np.random.randint(-7,7,size = col.Counter(mesh_struct[0])[1]), np.random.randint(-7,7,size = col.Counter(mesh_struct[1])[1]), np.random.randint(-7,7,size = col.Counter(mesh_struct[2])[1])]]
     print("\n\n\n Mesh input:")
     print(mesh_ip)
+    total_encoding_start_time = time.time()
     frame_type, encoded_str = encode(cfg.MESH_FRAME, mesh_ip)
+    total_encoding_end_time = time.time()
+    print("total encoding time (Mesh) = " + str(total_encoding_end_time - total_encoding_start_time))
     print("\nencoded_str:")
     print(encoded_str)
     toggle = 0
@@ -147,11 +159,16 @@ if __name__ == "__main__":
     print(rlc.decode_mesh(265,encoded_str))
 
     # ###################### DCT with System simulation #################################
-    DCT_ip = sysin.sim_DCT_in()
     print("\n\n\n DCT input:")
+    dct_start_time = time.time()
+    DCT_ip = sysin.sim_DCT_in()
+    dct_end_time = time.time()
     print(DCT_ip)
+    print("dct time  = " + str(dct_end_time - dct_start_time))
+    total_encoding_start_time = time.time()
     frame_type, encoded_str = encode(cfg.DCT_FRAME, [DCT_ip])
-    print("\nencoded_str:")
-    print(encoded_str)
-    print("\noutput:")
-    print(rlc.decode_dct(encoded_str[0], encoded_str[1]))
+    total_encoding_end_time = time.time()
+    print("total encoding time (DCT)  = " + str(total_encoding_end_time - total_encoding_start_time))
+    print("\noutput: ")
+    print(rlc.decode_mesh(encoded_str))
+

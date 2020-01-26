@@ -46,8 +46,8 @@ runlenght_config = ([
 ])
 
 # Input/Output file paths
-INPUT_FILE_NAME = ""
-OUTPUT_FILE_NAME = ""
+INPUT_FILE_NAME = 'TestingOutput/test.bin'
+OUTPUT_FILE_NAME = 'TestingOutput/test.bin'
 
 # Encoder Mode
 ENCODER_MODE = 1
