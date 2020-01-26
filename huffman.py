@@ -4,7 +4,7 @@ import bitarray
 import time
 import random
 
-RUN_LENGTH_KEY: int = 0
+RUN_LENGTH_KEY = 0
 MOTION_VECTORS_KEY = 1
 
 SYMBOLS_DICTIONARY = {
