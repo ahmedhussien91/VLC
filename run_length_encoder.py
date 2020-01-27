@@ -29,7 +29,7 @@ def encode(text):
         if (character != previous) or (count == 127) :
             if previous != None:
                 result.append(int(count))
-                result.append(int(character))
+                result.append(int(previous))
             count = 1
             previous = character
         else:
@@ -164,19 +164,15 @@ def decode_mesh(initial_mesh_block_size, data_np_arr_list):
     return
 
 
-def decode_dct(is_run_length_valid, dct_np_arr):
+def decode_dct(data_np_arr_list):
     quantized_dct_list = []
-    # decode run length if it's valid
-    if is_run_length_valid:
-        dct_np_arr = decode(list(dct_np_arr))
-    # separate into 3 lists depending on configuration
-    cfg_sum = sum(cfg.YUV_CONFIG)
-    ysize = int((cfg.YUV_CONFIG[0] / cfg_sum) * len(list(dct_np_arr)))
-    usize = int((cfg.YUV_CONFIG[1] / cfg_sum) * len(list(dct_np_arr)))
-    vsize = int((cfg.YUV_CONFIG[2] / cfg_sum) * len(list(dct_np_arr)))
-    quantized_dct_list.append(np.array(dct_np_arr[0: ysize]))
-    quantized_dct_list.append(np.array(dct_np_arr[ysize: ysize + usize]))
-    quantized_dct_list.append(np.array(dct_np_arr[ysize + usize: ysize + usize + vsize]))
+
+    for i, data_np_arr_rlcValid in enumerate(data_np_arr_list):
+        # decode run length if it's valid
+        if data_np_arr_rlcValid[0]:
+            quantized_dct_list.append(np.array(decode(data_np_arr_rlcValid[1])))
+        else:
+            quantized_dct_list.append(np.array(data_np_arr_rlcValid[1]))
 
     return quantized_dct_list
 

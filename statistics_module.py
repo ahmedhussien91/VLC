@@ -51,7 +51,12 @@ def DoStatistics_mesh(encoded_meshStruct_list, encoded_meshVector_list):
                 meshVector_Symbols_count_dic[symbol] = meshVector_Symbols_count_dic[symbol] + count
             else:
                 meshVector_Symbols_count_dic[symbol] = count
-
+    for x in range(-7, 8, 1):
+        if x in meshVector_Symbols_count_dic:
+            pass
+        else:
+            meshVector_Symbols_count_dic[x] = 1
+            meshVector_total_symbols_count += 1
     #
     return
 
@@ -74,6 +79,7 @@ def DoStatistics_DCT(encoded_dct_list):
             pass
         else:
             DCT_Symbols_count_dic[x] = 1
+            DCT_total_symbols_count += 1
     return
 
 
