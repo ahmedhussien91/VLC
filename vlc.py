@@ -95,7 +95,10 @@ def encode_dct(quantized_dct_list):
     huffman_end_time = time.time()
     print("huffman encoding time = " + str(huffman_end_time - huffman_start_time))
 
-    return [is_runlength_valid, encoded_dct]
+    testing_out = []
+    for i in range(len(encoded_dct)):
+        testing_out.append((is_runlength_valid[i], encoded_dct[i]))
+    return testing_out
 
 '''I/P: frame_type: 0 -> DCT_FRAME, 1 -> MESH_FRAME, 2 -> MOTION_VECTORS_FRAME, 3 -> EOF_REACHED 
         listOfData: for DCT list of list of np array, 
@@ -159,16 +162,16 @@ if __name__ == "__main__":
     print(rlc.decode_mesh(265,encoded_str))
 
     # ###################### DCT with System simulation #################################
-    print("\n\n\n DCT input:")
-    dct_start_time = time.time()
-    DCT_ip = sysin.sim_DCT_in()
-    dct_end_time = time.time()
-    print(DCT_ip)
-    print("dct time  = " + str(dct_end_time - dct_start_time))
-    total_encoding_start_time = time.time()
-    frame_type, encoded_str = encode(cfg.DCT_FRAME, [DCT_ip])
-    total_encoding_end_time = time.time()
-    print("total encoding time (DCT)  = " + str(total_encoding_end_time - total_encoding_start_time))
-    print("\noutput: ")
-    print(rlc.decode_mesh(encoded_str))
-
+    # print("\n\n\n DCT input:")
+    # dct_start_time = time.time()
+    # DCT_ip = sysin.sim_DCT_in()
+    # dct_end_time = time.time()
+    # print(DCT_ip)
+    # print("dct time  = " + str(dct_end_time - dct_start_time))
+    # total_encoding_start_time = time.time()
+    # frame_type, encoded_str = encode(cfg.DCT_FRAME, [DCT_ip])
+    # total_encoding_end_time = time.time()
+    # print("total encoding time (DCT)  = " + str(total_encoding_end_time - total_encoding_start_time))
+    # print("\noutput: ")
+    # print(rlc.decode_dct(encoded_str))
+    # print("\noutput: ")

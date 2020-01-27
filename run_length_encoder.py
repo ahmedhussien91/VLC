@@ -29,7 +29,7 @@ def encode(text):
         if (character != previous) or (count == 127) :
             if previous != None:
                 result.append(int(count))
-                result.append(int(character))
+                result.append(int(previous))
             count = 1
             previous = character
         else:
@@ -172,7 +172,7 @@ def decode_dct(data_np_arr_list):
         if data_np_arr_rlcValid[0]:
             quantized_dct_list.append(np.array(decode(data_np_arr_rlcValid[1])))
         else:
-            quantized_dct_list.append(data_np_arr_rlcValid[1])
+            quantized_dct_list.append(np.array(data_np_arr_rlcValid[1]))
 
     return quantized_dct_list
 

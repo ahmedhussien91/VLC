@@ -51,7 +51,7 @@ def DoStatistics_mesh(encoded_meshStruct_list, encoded_meshVector_list):
                 meshVector_Symbols_count_dic[symbol] = meshVector_Symbols_count_dic[symbol] + count
             else:
                 meshVector_Symbols_count_dic[symbol] = count
-    for x in range(-7,8,1):
+    for x in range(-7, 8, 1):
         if x in meshVector_Symbols_count_dic:
             pass
         else:
