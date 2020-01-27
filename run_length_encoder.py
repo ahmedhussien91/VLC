@@ -3,7 +3,7 @@ import statistics_module as stat
 import numpy as np
 
 ########################################### Run lenght coding #######################################################
-def encode(text):
+def encode(text, max_count=127):
 
     """
     Returns a run-length encoded string from an input string.
@@ -12,6 +12,7 @@ def encode(text):
 
     Args:
         text (str): A string to encode
+        max_count (uint): the max count for run length coding
 
     Returns:
         str: A run length encoded string
@@ -26,7 +27,7 @@ def encode(text):
     result = []
 
     for character in text:
-        if (character != previous) or (count == 127) :
+        if (character != previous) or (count == max_count):
             if previous != None:
                 result.append(int(count))
                 result.append(int(previous))
@@ -92,7 +93,7 @@ def encode_meshVectors(data_np_arr_list):
     encoded_meshVector = []
     is_run_length_valid = []
     for i, data_np_arr in enumerate(data_np_arr_list):
-        encoded_meshVector.append(encode(list(data_np_arr)))
+        encoded_meshVector.append(encode(list(data_np_arr), 7))
         # check that the runlength coding valid for each data block
     for i, data_np_arr in enumerate(data_np_arr_list):
         if len(data_np_arr) < len(encoded_meshVector[i]):
