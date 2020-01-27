@@ -48,6 +48,9 @@ runlenght_config = ([
 # Input/Output file paths
 INPUT_FILE_NAME = 'TestingOutput/test.bin'
 OUTPUT_FILE_NAME = 'TestingOutput/test.bin'
+NUMBER_OF_BITS_FOR_FRAME_TYPE = 2
+NUMBER_OF_BITS_FOR_FRAME_STREAM_SIZE = 25
+NUMBER_OF_BITS_FOR_LAYERS_COUNT = 3
 
 # Encoder Mode
 ENCODER_MODE = 1

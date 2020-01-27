@@ -172,7 +172,7 @@ if __name__ == "__main__":
     #     # decode(encoded_str)
 
     # ###################### DCT with System simulation #################################
-    init_encoder("output", frame_resolution=None, yuv_config=None, encoder_mode=0)
+    init_encoder("TestingOutput/test.bin", frame_resolution=None, yuv_config=None, encoder_mode=0)
 
     dct_start_time = time.time()
     DCT_ip = sysin.sim_DCT_in()
@@ -184,6 +184,9 @@ if __name__ == "__main__":
     frame_type, encoded_str = encode(cfg.DCT_FRAME, [DCT_ip])
     total_encoding_end_time = time.time()
     print("total encoding time  = " + str(total_encoding_end_time - total_encoding_start_time))
-    # print("\nencoded_str:")
-    # print(encoded_str)
+
+    total_decoding_start_time = time.time()
+    frame_type, decoded_str = decode()
+    total_decoding_end_time = time.time()
+    print("total decoding time  = " + str(total_decoding_end_time - total_decoding_start_time))
 

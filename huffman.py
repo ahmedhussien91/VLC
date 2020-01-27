@@ -25,9 +25,13 @@ CODING_DICTIONARIES = {
     MOTION_VECTORS_KEY: {}
 }
 
+ENCODED_DATA = bitarray.bitarray()
+
 CURRENT_FRAME_TYPE = cfg.DCT_FRAME
 CURRENT_FRAME = bitarray.bitarray()
 FRAME_OPENED = False
+
+DATA_TO_DECODE_OFFSET = 0
 
 
 def calculate_entropy(coding_list, symbols_count_list):
@@ -40,7 +44,7 @@ def calculate_entropy(coding_list, symbols_count_list):
     return entropy
 
 
-def num_to_bitarr(num, no_of_bits=0):
+def num_to_bitarray(num, no_of_bits=0):
     if 0 == no_of_bits:
         bitarr = bitarray.bitarray(str(bin(num)).lstrip('0b'))
     elif len(str(bin(num)).lstrip('0b')) <= no_of_bits:
@@ -53,18 +57,18 @@ def num_to_bitarr(num, no_of_bits=0):
     return bitarr
 
 
-def bitarr_to_num(bitarr):
+def bitarray_to_num(bitarr):
     num = int(bitarr.to01(), 2)
     return num
 
 
 def add_header():
     global CURRENT_FRAME
-    CURRENT_FRAME += num_to_bitarr(cfg.FRAME_RESOLUTION[0], 16)
-    CURRENT_FRAME += num_to_bitarr(cfg.FRAME_RESOLUTION[1], 16)
-    CURRENT_FRAME += num_to_bitarr(cfg.YUV_CONFIG[0], 3)
-    CURRENT_FRAME += num_to_bitarr(cfg.YUV_CONFIG[1], 3)
-    CURRENT_FRAME += num_to_bitarr(cfg.YUV_CONFIG[2], 3)
+    CURRENT_FRAME += num_to_bitarray(cfg.FRAME_RESOLUTION[0], 16)
+    CURRENT_FRAME += num_to_bitarray(cfg.FRAME_RESOLUTION[1], 16)
+    CURRENT_FRAME += num_to_bitarray(cfg.YUV_CONFIG[0], 3)
+    CURRENT_FRAME += num_to_bitarray(cfg.YUV_CONFIG[1], 3)
+    CURRENT_FRAME += num_to_bitarray(cfg.YUV_CONFIG[2], 3)
     # TODO: add number of frames @ the end or we can end the frame with a code that is not a part of huffman code
     return
 
@@ -149,11 +153,16 @@ def load_coding_dictionaries():
 #   [DCT_FRAME, MESH_FRAME, or MOTION_VECTORS_FRAME]
 #   This function returns True if a new frame started successfully, False if there is already a frame opened to encode
 def begin_encoding(frame_type, box_size=0):
-    global CURRENT_FRAME, CURRENT_FRAME_TYPE, FRAME_OPENED
+    global CURRENT_FRAME, CURRENT_FRAME_TYPE, FRAME_OPENED, ENCODED_DATA
 
     if FRAME_OPENED:
         print("Error: encoding frame already opened.")
         return False
+
+    assert (frame_type == cfg.DCT_FRAME) or (frame_type == cfg.MESH_FRAME) or (frame_type == cfg.MOTION_VECTORS_FRAME), \
+        "Error: Invalid frame type."
+
+    ENCODED_DATA += num_to_bitarray(frame_type, cfg.NUMBER_OF_BITS_FOR_FRAME_TYPE)
 
     cfg.INITIAL_MESH_BLOCK_SIZE = box_size
     CURRENT_FRAME_TYPE = frame_type
@@ -171,10 +180,9 @@ def end_encoding():
         print("Error: frame already closed.")
         return False
 
-    ### To do save frame to file ###
-    print('encoded stream = ' + str(len(CURRENT_FRAME)))
-    with open(cfg.INPUT_FILE_NAME, 'wb') as file:
-        CURRENT_FRAME.tofile(file)
+    print('encoded stream = ' + str(len(ENCODED_DATA)))
+    with open(cfg.OUTPUT_FILE_NAME, 'wb') as file:
+        ENCODED_DATA.tofile(file)
 
     CURRENT_FRAME = bitarray.bitarray()
     FRAME_OPENED = False
@@ -195,14 +203,19 @@ def encode_symbol(is_run_length_valid, symbol, index, current_encoding_dictionar
 # to attach the encoded data to the frame.
 #   "data" is a numpy array for the data to be encoded
 def encode(is_run_length_valid, data):
-    global FRAME_OPENED, CURRENT_FRAME, CURRENT_FRAME_TYPE
+    global FRAME_OPENED, CURRENT_FRAME, CURRENT_FRAME_TYPE, ENCODED_DATA
 
     if not FRAME_OPENED:
         print("Error: there is no frame opened for encoding.")
         return -1
 
-    current_frame_size = len(CURRENT_FRAME)
+    current_encoded_size = len(ENCODED_DATA)
     current_encoding_dictionary = -1
+
+    if is_run_length_valid:
+        ENCODED_DATA += bitarray.bitarray('1')
+    else:
+        ENCODED_DATA += bitarray.bitarray('0')
 
     if cfg.DCT_FRAME == CURRENT_FRAME_TYPE:
         current_encoding_dictionary = RUN_LENGTH_KEY
@@ -212,7 +225,12 @@ def encode(is_run_length_valid, data):
     for i in range(0, len(data)):
         encode_symbol(is_run_length_valid, data[i], i, current_encoding_dictionary)
 
-    return len(CURRENT_FRAME) - current_frame_size
+    current_frame_size = len(CURRENT_FRAME)
+    ENCODED_DATA += num_to_bitarray(current_frame_size, cfg.NUMBER_OF_BITS_FOR_FRAME_STREAM_SIZE)
+    ENCODED_DATA += CURRENT_FRAME
+    CURRENT_FRAME = bitarray.bitarray()
+
+    return len(ENCODED_DATA) - current_encoded_size
 
 
 # this function returns the decoded frame type and the decoded data
@@ -223,29 +241,43 @@ def encode(is_run_length_valid, data):
 # length of the returned list will be 1 in case of DCT frame
 # and the number of the layers in case of mesh or motion vectors frames
 def decode():
-    data = bitarray.bitarray()
+    global DATA_TO_DECODE_OFFSET
+
+    encoded_data = bitarray.bitarray()
     decoded_data = np.array([])
 
     decoding_dictionary = RUN_LENGTH_KEY
 
-    with open(cfg.OUTPUT_FILE_NAME, 'rb') as file:
-        data.fromfile(file)
+    with open(cfg.INPUT_FILE_NAME, 'rb') as file:
+        encoded_data.fromfile(file)
 
-    index = -1
-    code = ''
-    for bit in data:
-        if bit:
-            code += '1'
-        else:
-            code += '0'
+    frame_type = bitarray_to_num(encoded_data[0:1])
+    print("frame_type = " + str(frame_type))
 
-        if CODING_LISTS[decoding_dictionary].count(code) == 1:
-            index = CODING_LISTS[decoding_dictionary].index(code)
-            decoded_data = np.append(decoded_data, SYMBOLS_DICTIONARY[decoding_dictionary][index])
-            code = ''
-            index = -1
+    DATA_TO_DECODE_OFFSET = 2
 
-    print("decoded_data = " + str(decoded_data))
+    number_of_layers = 0
+    if frame_type == cfg.DCT_FRAME:
+        number_of_layers = 3
+    else:
+        number_of_layers = bitarray_to_num(encoded_data[DATA_TO_DECODE_OFFSET, DATA_TO_DECODE_OFFSET + cfg.NUMBER_OF_BITS_FOR_LAYERS_COUNT - 1])
+        DATA_TO_DECODE_OFFSET += cfg.NUMBER_OF_BITS_FOR_LAYERS_COUNT
+
+    # index = -1
+    # code = ''
+    # for bit in encoded_data:
+    #     if bit:
+    #         code += '1'
+    #     else:
+    #         code += '0'
+    #
+    #     if CODING_LISTS[decoding_dictionary].count(code) == 1:
+    #         index = CODING_LISTS[decoding_dictionary].index(code)
+    #         decoded_data = np.append(decoded_data, SYMBOLS_DICTIONARY[decoding_dictionary][index])
+    #         code = ''
+    #         index = -1
+    #
+    # print("decoded_data = " + str(decoded_data))
 
     frame_type = 0
     data = [[True, np.array([5, 0, 6, 1, 10, 0])],
