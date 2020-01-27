@@ -37,6 +37,8 @@ FRAME_OPENED = False
 
 DATA_TO_DECODE_OFFSET = 0
 
+CODE_LENGTH_LIST = np.array([], dtype=np.uint8)
+
 
 def calculate_entropy(coding_list, symbols_count_list):
     entropy = 0
@@ -135,6 +137,7 @@ def generate_coding_dictionary(frame_type, symbols_prob_dic):
 
 
 def load_coding_dictionaries():
+    global CODE_LENGTH_LIST
     filenames = ["CodingDictionaries/dct_coding_dictionary.txt", "CodingDictionaries/motion_coding_dictionary.txt"]
 
     i = 0
@@ -150,7 +153,13 @@ def load_coding_dictionaries():
                 CODING_DICTIONARIES[i][SYMBOLS_DICTIONARY[i][index]] = bitarray.bitarray(CODING_LISTS[i][index])
                 DECODING_DICTIONARIES[i][CODING_LISTS[i][index]] = SYMBOLS_DICTIONARY[i][index]
 
+                if len(CODING_LISTS[i][index]) not in CODE_LENGTH_LIST:
+                    CODE_LENGTH_LIST = np.append(CODE_LENGTH_LIST, len(CODING_LISTS[i][index]))
+
         i += 1
+
+    CODE_LENGTH_LIST.sort()
+    print("CODE_LENGTH_LIST = ", CODE_LENGTH_LIST)
 
 
 # this function must be called before encode(data) to start new frame
@@ -195,15 +204,6 @@ def end_encoding():
     return True
 
 
-def encode_symbol(is_run_length_valid, symbol, index, current_encoding_dictionary):
-    global CURRENT_FRAME
-
-    if is_run_length_valid and ((index % 2) == 0):
-        CURRENT_FRAME += CODING_DICTIONARIES[RUN_LENGTH_KEY][symbol]
-    else:
-        CURRENT_FRAME += CODING_DICTIONARIES[current_encoding_dictionary][symbol]
-
-
 # this function must be called between a call of begin_encoding(frame_type) and end_encoding
 # to attach the encoded data to the frame.
 #   "data" is a numpy array for the data to be encoded
@@ -227,8 +227,7 @@ def encode(is_run_length_valid, data):
     elif cfg.MOTION_VECTORS_FRAME:
         current_encoding_dictionary = MOTION_VECTORS_KEY
 
-    for i in range(0, len(data)):
-        encode_symbol(is_run_length_valid, data[i], i, current_encoding_dictionary)
+    CURRENT_FRAME.encode(CODING_DICTIONARIES[RUN_LENGTH_KEY], data)
 
     current_frame_size = len(CURRENT_FRAME)
     ENCODED_DATA += num_to_bitarray(current_frame_size, cfg.NUMBER_OF_BITS_FOR_FRAME_STREAM_SIZE)
@@ -289,24 +288,15 @@ def decode():
         DATA_TO_DECODE_OFFSET += cfg.NUMBER_OF_BITS_FOR_LAYERS_COUNT
 
     for i in range(0, number_of_layers):
-        new_decoded_layer = [False, np.array()]
+        new_decoded_layer = [False, np.array([], dtype=np.uint8)]
         new_decoded_layer[0] = ENCODED_DATA[DATA_TO_DECODE_OFFSET]
         DATA_TO_DECODE_OFFSET += 1
-        layer_stream_size = bitarray_to_num(ENCODED_DATA[DATA_TO_DECODE_OFFSET:cfg.NUMBER_OF_BITS_FOR_FRAME_STREAM_SIZE])
+        layer_stream_size = bitarray_to_num(ENCODED_DATA[DATA_TO_DECODE_OFFSET: DATA_TO_DECODE_OFFSET + cfg.NUMBER_OF_BITS_FOR_FRAME_STREAM_SIZE])
         DATA_TO_DECODE_OFFSET += cfg.NUMBER_OF_BITS_FOR_FRAME_STREAM_SIZE
         sub_encoded_stream = ENCODED_DATA[DATA_TO_DECODE_OFFSET:DATA_TO_DECODE_OFFSET + layer_stream_size]
         DATA_TO_DECODE_OFFSET += layer_stream_size
 
-        code = ''
-        for bit in sub_encoded_stream:
-            if bit:
-                code += '1'
-            else:
-                code += '0'
-
-            if SYMBOLS_DICTIONARY[decoding_dictionary][code] is not None:
-                new_decoded_layer[1] = np.append(new_decoded_layer[1], SYMBOLS_DICTIONARY[decoding_dictionary][code])
-                code = ''
+        new_decoded_layer[1] = sub_encoded_stream.decode(CODING_DICTIONARIES[decoding_dictionary])
 
         data.append(new_decoded_layer)
 

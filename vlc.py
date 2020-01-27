@@ -37,10 +37,15 @@ def init_encoder(output_filename, frame_resolution=None, yuv_config=None, encode
         "Error: YUV array must be 3 integer values."
     assert (0 <= yuv_config[0] <= 4 and 0 <= yuv_config[1] <= 4 and 0 <= yuv_config[2] <= 4), \
         "Error: YUV values must be from 0 to 4"
+
     cfg.YUV_CONFIG = yuv_config
     cfg.ENCODER_MODE = encoder_mode
     # add configuration to header
     huff.add_header()
+
+    if cfg.ENCODER_MODE == 0:
+        huff.load_coding_dictionaries()
+
     return
 
 # this function must be called before decoding.
@@ -107,8 +112,6 @@ def encode_dct(quantized_dct_list):
                     for end of file reached no data required
 '''
 def encode(frame_type, listOfData):
-    if cfg.ENCODER_MODE == 0:
-        huff.load_coding_dictionaries()
     if(frame_type == cfg.DCT_FRAME):
         encoded_data = encode_dct(listOfData[0])
     elif(frame_type == cfg.MESH_FRAME):
@@ -125,9 +128,13 @@ def encode(frame_type, listOfData):
 ############################################## Decoder #############################################################
 def decode():
     # Huffman
+    print("decoding Huffman ....................")
+    start_huff_time = time.time()
     huff.begin_decoding()
     frame_type, box_size, listOfData = huff.decode()
     huff.end_decoding()
+    end_huff_time = time.time()
+    print("huffman decoding time = ", end_huff_time - start_huff_time)
 
     # run length
     if (frame_type == cfg.DCT_FRAME):
@@ -209,7 +216,7 @@ if __name__ == "__main__":
     total_decoding_start_time = time.time()
     frame_type, decoded_str = decode()
     total_decoding_end_time = time.time()
-    print("total encoding time (DCT)  = " + str(total_encoding_end_time - total_encoding_start_time))
+    print("total decoding time (DCT)  = " + str(total_encoding_end_time - total_encoding_start_time))
 
-    # print("\noutput: ")
-    # print(rlc.decode_dct(encoded_str))
+    print("\noutput: ")
+    print(decoded_str)
