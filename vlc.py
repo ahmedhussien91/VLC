@@ -125,7 +125,10 @@ def encode(frame_type, listOfData):
 ############################################## Decoder #############################################################
 def decode():
     # Huffman
+    huff.begin_decoding()
     frame_type, box_size, listOfData = huff.decode()
+    huff.end_decoding()
+
     # run length
     if (frame_type == cfg.DCT_FRAME):
         decoded_data = rlc.decode_dct(listOfData)
@@ -206,7 +209,7 @@ if __name__ == "__main__":
     total_decoding_start_time = time.time()
     frame_type, decoded_str = decode()
     total_decoding_end_time = time.time()
-
     print("total encoding time (DCT)  = " + str(total_encoding_end_time - total_encoding_start_time))
-    print("\noutput: ")
-    print(rlc.decode_dct(encoded_str))
+
+    # print("\noutput: ")
+    # print(rlc.decode_dct(encoded_str))

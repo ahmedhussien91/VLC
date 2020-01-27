@@ -24,6 +24,10 @@ CODING_DICTIONARIES = {
     RUN_LENGTH_KEY: {},
     MOTION_VECTORS_KEY: {}
 }
+DECODING_DICTIONARIES = {
+    RUN_LENGTH_KEY: {},
+    MOTION_VECTORS_KEY: {}
+}
 
 ENCODED_DATA = bitarray.bitarray()
 
@@ -144,6 +148,7 @@ def load_coding_dictionaries():
 
             for index in range(len(SYMBOLS_DICTIONARY[i])):
                 CODING_DICTIONARIES[i][SYMBOLS_DICTIONARY[i][index]] = bitarray.bitarray(CODING_LISTS[i][index])
+                DECODING_DICTIONARIES[i][CODING_LISTS[i][index]] = SYMBOLS_DICTIONARY[i][index]
 
         i += 1
 
@@ -233,6 +238,25 @@ def encode(is_run_length_valid, data):
     return len(ENCODED_DATA) - current_encoded_size
 
 
+def begin_decoding():
+    global DATA_TO_DECODE_OFFSET, ENCODED_DATA
+
+    DATA_TO_DECODE_OFFSET = 0
+
+    if len(ENCODED_DATA) == 0:
+        ENCODED_DATA = bitarray.bitarray()
+
+        with open(cfg.INPUT_FILE_NAME, 'rb') as file:
+            ENCODED_DATA.fromfile(file)
+            file.close()
+
+
+def end_decoding():
+    global DATA_TO_DECODE_OFFSET, ENCODED_DATA
+    ENCODED_DATA = bitarray.bitarray()
+    DATA_TO_DECODE_OFFSET = 0
+
+
 # this function returns the decoded frame type and the decoded data
 # in list of layers of list of 2 [Is RunLength Valid, frame's data]
 # example: [[True, np.array([5, 0, 6, 1, 10, 0])],
@@ -241,48 +265,51 @@ def encode(is_run_length_valid, data):
 # length of the returned list will be 1 in case of DCT frame
 # and the number of the layers in case of mesh or motion vectors frames
 def decode():
-    global DATA_TO_DECODE_OFFSET
+    global DATA_TO_DECODE_OFFSET, ENCODED_DATA
 
-    encoded_data = bitarray.bitarray()
-    decoded_data = np.array([])
+    data = []
 
     decoding_dictionary = RUN_LENGTH_KEY
 
-    with open(cfg.INPUT_FILE_NAME, 'rb') as file:
-        encoded_data.fromfile(file)
-
-    frame_type = bitarray_to_num(encoded_data[0:1])
+    frame_type = bitarray_to_num(ENCODED_DATA[DATA_TO_DECODE_OFFSET: DATA_TO_DECODE_OFFSET + cfg.NUMBER_OF_BITS_FOR_FRAME_TYPE])
     print("frame_type = " + str(frame_type))
 
-    DATA_TO_DECODE_OFFSET = 2
+    if frame_type == cfg.DCT_FRAME:
+        decoding_dictionary = RUN_LENGTH_KEY
+    elif frame_type == cfg.MOTION_VECTORS_FRAME:
+        decoding_dictionary = MOTION_VECTORS_KEY
+
+    DATA_TO_DECODE_OFFSET += cfg.NUMBER_OF_BITS_FOR_FRAME_TYPE
 
     number_of_layers = 0
     if frame_type == cfg.DCT_FRAME:
         number_of_layers = 3
     else:
-        number_of_layers = bitarray_to_num(encoded_data[DATA_TO_DECODE_OFFSET, DATA_TO_DECODE_OFFSET + cfg.NUMBER_OF_BITS_FOR_LAYERS_COUNT - 1])
+        number_of_layers = bitarray_to_num(ENCODED_DATA[DATA_TO_DECODE_OFFSET:DATA_TO_DECODE_OFFSET + cfg.NUMBER_OF_BITS_FOR_LAYERS_COUNT])
         DATA_TO_DECODE_OFFSET += cfg.NUMBER_OF_BITS_FOR_LAYERS_COUNT
 
-    # index = -1
-    # code = ''
-    # for bit in encoded_data:
-    #     if bit:
-    #         code += '1'
-    #     else:
-    #         code += '0'
-    #
-    #     if CODING_LISTS[decoding_dictionary].count(code) == 1:
-    #         index = CODING_LISTS[decoding_dictionary].index(code)
-    #         decoded_data = np.append(decoded_data, SYMBOLS_DICTIONARY[decoding_dictionary][index])
-    #         code = ''
-    #         index = -1
-    #
-    # print("decoded_data = " + str(decoded_data))
+    for i in range(0, number_of_layers):
+        new_decoded_layer = [False, np.array()]
+        new_decoded_layer[0] = ENCODED_DATA[DATA_TO_DECODE_OFFSET]
+        DATA_TO_DECODE_OFFSET += 1
+        layer_stream_size = bitarray_to_num(ENCODED_DATA[DATA_TO_DECODE_OFFSET:cfg.NUMBER_OF_BITS_FOR_FRAME_STREAM_SIZE])
+        DATA_TO_DECODE_OFFSET += cfg.NUMBER_OF_BITS_FOR_FRAME_STREAM_SIZE
+        sub_encoded_stream = ENCODED_DATA[DATA_TO_DECODE_OFFSET:DATA_TO_DECODE_OFFSET + layer_stream_size]
+        DATA_TO_DECODE_OFFSET += layer_stream_size
 
-    frame_type = 0
-    data = [[True, np.array([5, 0, 6, 1, 10, 0])],
-            [False, np.array([0, 1, 0, 1, 0, 1])],
-            [True, np.array([5, 0, 6, 1, 10, 0])]]
+        code = ''
+        for bit in sub_encoded_stream:
+            if bit:
+                code += '1'
+            else:
+                code += '0'
+
+            if SYMBOLS_DICTIONARY[decoding_dictionary][code] is not None:
+                new_decoded_layer[1] = np.append(new_decoded_layer[1], SYMBOLS_DICTIONARY[decoding_dictionary][code])
+                code = ''
+
+        data.append(new_decoded_layer)
+
     box_size = 256
     return frame_type, box_size, data
 
