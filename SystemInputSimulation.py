@@ -59,9 +59,9 @@ def dctYUV(y,u,v):
 
     return dct_y, dct_u, dct_v
 
-def sim_DCT_in():
+def sim_DCT_in(image_name):
     ####### read Image ###########
-    img = cv2.imread('./in/20.jpg',1)
+    img = cv2.imread(image_name,1)
     # cv2.imshow('Display frame', img)
     # cv2.waitKey(0)
 

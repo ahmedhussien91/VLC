@@ -74,7 +74,8 @@ def encode_mesh(initial_mesh_block_size, mesh_struct_list, motion_vectors_list):
     encoded_meshVector_list, is_runlength_valid_vectors = rlc.encode_meshVectors(motion_vectors_list)
 
     # Do statistics on symbols
-    stat.DoStatistics_mesh(encoded_meshStruct_list, encoded_meshVector_list)
+    if cfg.ENCODER_MODE == 1:
+        stat.DoStatistics_mesh(encoded_meshStruct_list, encoded_meshVector_list)
 
     # Call the huffman with the agreed sequence, check on encoded_meshStruct
     if cfg.ENCODER_MODE == 0:
@@ -96,8 +97,9 @@ def encode_mesh(initial_mesh_block_size, mesh_struct_list, motion_vectors_list):
 def encode_dct(quantized_dct_list):
     frame_type = cfg.DCT_FRAME
     encoded_dct, is_runlength_valid = rlc.encode_dct(quantized_dct_list)
-    # Do statistics on symbols
-    stat.DoStatistics_DCT(encoded_dct)
+    if cfg.ENCODER_MODE == 1:
+        # Do statistics on symbols
+        stat.DoStatistics_DCT(encoded_dct)
 
     huffman_start_time = time.time()
     # Call the hoffman with the agreed sequance
@@ -224,17 +226,93 @@ if __name__ == "__main__":
     total_encoding_end_time = time.time()
     print("total encoding time (Mesh) = " + str(total_encoding_end_time - total_encoding_start_time))
 
+    ############# Motion Vectors input simulation ############################
+    mesh_struct = [np.random.randint(2, size=cfg.LAYER1_MESH_STRUCT_SIZE),
+                   np.random.randint(2, size=cfg.LAYER1_MESH_STRUCT_SIZE * 4),
+                   np.random.randint(2, size=cfg.LAYER1_MESH_STRUCT_SIZE * 4 * 4),
+                   np.random.randint(2, size=cfg.LAYER1_MESH_STRUCT_SIZE * 4 * 4 * 4)
+                   ]
+    motion_ip = [0,[],[np.random.randint(-7, 7, size=col.Counter(mesh_struct[0])[1]),
+     np.random.randint(-7, 7, size=col.Counter(mesh_struct[1])[1]),
+     np.random.randint(-7, 7, size=col.Counter(mesh_struct[2])[1]),
+     np.random.randint(-7, 7, size=col.Counter(mesh_struct[3])[1])]]
+    print("\n\n\n Motion input:")
+    print(motion_ip)
+    total_encoding_start_time = time.time()
+    frame_type, encoded_str = encode(cfg.MOTION_VECTORS_FRAME, motion_ip)
+    total_encoding_end_time = time.time()
+    print("total encoding time (Mesh) = " + str(total_encoding_end_time - total_encoding_start_time))
+
+    ############# Motion Vectors input simulation ############################
+    mesh_struct = [np.random.randint(2, size=cfg.LAYER1_MESH_STRUCT_SIZE),
+                   np.random.randint(2, size=cfg.LAYER1_MESH_STRUCT_SIZE * 4),
+                   np.random.randint(2, size=cfg.LAYER1_MESH_STRUCT_SIZE * 4 * 4),
+                   np.random.randint(2, size=cfg.LAYER1_MESH_STRUCT_SIZE * 4 * 4 * 4)
+                   ]
+    motion_ip = [0,[],[np.random.randint(-7, 7, size=col.Counter(mesh_struct[0])[1]),
+     np.random.randint(-7, 7, size=col.Counter(mesh_struct[1])[1]),
+     np.random.randint(-7, 7, size=col.Counter(mesh_struct[2])[1]),
+     np.random.randint(-7, 7, size=col.Counter(mesh_struct[3])[1])]]
+    print("\n\n\n Motion input:")
+    print(motion_ip)
+    total_encoding_start_time = time.time()
+    frame_type, encoded_str = encode(cfg.MOTION_VECTORS_FRAME, motion_ip)
+    total_encoding_end_time = time.time()
+    print("total encoding time (Mesh) = " + str(total_encoding_end_time - total_encoding_start_time))
+
+    ############# Motion Vectors input simulation ############################
+    mesh_struct = [np.random.randint(2, size=cfg.LAYER1_MESH_STRUCT_SIZE),
+                   np.random.randint(2, size=cfg.LAYER1_MESH_STRUCT_SIZE * 4),
+                   np.random.randint(2, size=cfg.LAYER1_MESH_STRUCT_SIZE * 4 * 4),
+                   np.random.randint(2, size=cfg.LAYER1_MESH_STRUCT_SIZE * 4 * 4 * 4)
+                   ]
+    motion_ip = [0,[],[np.random.randint(-7, 7, size=col.Counter(mesh_struct[0])[1]),
+     np.random.randint(-7, 7, size=col.Counter(mesh_struct[1])[1]),
+     np.random.randint(-7, 7, size=col.Counter(mesh_struct[2])[1]),
+     np.random.randint(-7, 7, size=col.Counter(mesh_struct[3])[1])]]
+    print("\n\n\n Motion input:")
+    print(motion_ip)
+    total_encoding_start_time = time.time()
+    frame_type, encoded_str = encode(cfg.MOTION_VECTORS_FRAME, motion_ip)
+    total_encoding_end_time = time.time()
+    print("total encoding time (Mesh) = " + str(total_encoding_end_time - total_encoding_start_time))
+
     # ###################### DCT with System simulation #################################
-    # print("\n\n\n DCT input:")
-    # dct_start_time = time.time()
-    # DCT_ip = sysin.sim_DCT_in()
-    # dct_end_time = time.time()
-    # print(DCT_ip)
-    # print("dct time  = " + str(dct_end_time - dct_start_time))
-    # total_encoding_start_time = time.time()
-    # frame_type, encoded_str = encode(cfg.DCT_FRAME, [DCT_ip])
-    # total_encoding_end_time = time.time()
-    # print("total encoding time  = " + str(total_encoding_end_time - total_encoding_start_time))
+    print("\n\n\n DCT input:")
+    dct_start_time = time.time()
+    DCT_ip = sysin.sim_DCT_in('./in/20.jpg')
+    dct_end_time = time.time()
+    print(DCT_ip)
+    print("dct time  = " + str(dct_end_time - dct_start_time))
+    total_encoding_start_time = time.time()
+    frame_type, encoded_str = encode(cfg.DCT_FRAME, [DCT_ip])
+    total_encoding_end_time = time.time()
+    print("total encoding time  = " + str(total_encoding_end_time - total_encoding_start_time))
+
+    # ###################### DCT with System simulation #################################
+    print("\n\n\n DCT input:")
+    dct_start_time = time.time()
+    DCT_ip = sysin.sim_DCT_in('./in/0.jpg')
+    dct_end_time = time.time()
+    print(DCT_ip)
+    print("dct time  = " + str(dct_end_time - dct_start_time))
+    total_encoding_start_time = time.time()
+    frame_type, encoded_str = encode(cfg.DCT_FRAME, [DCT_ip])
+    total_encoding_end_time = time.time()
+    print("total encoding time  = " + str(total_encoding_end_time - total_encoding_start_time))
+
+    # ###################### DCT with System simulation #################################
+    print("\n\n\n DCT input:")
+    dct_start_time = time.time()
+    DCT_ip = sysin.sim_DCT_in('./in/10.jpg')
+    dct_end_time = time.time()
+    print(DCT_ip)
+    print("dct time  = " + str(dct_end_time - dct_start_time))
+    total_encoding_start_time = time.time()
+    frame_type, encoded_str = encode(cfg.DCT_FRAME, [DCT_ip])
+    total_encoding_end_time = time.time()
+    print("total encoding time  = " + str(total_encoding_end_time - total_encoding_start_time))
+
 
     # ###################### Decoding Frames simulation #################################
     decoded_frame_type = cfg.DCT_FRAME
