@@ -216,6 +216,7 @@ def end_encoding():
     print('encoded stream = ' + str(len(ENCODED_DATA)))
     with open(cfg.OUTPUT_FILES_NAME_PATH + str(CURRENT_ENCODING_FRAME_NUMBER) + cfg.FRAME_FILE_EXTENSION, 'wb') as file:
         ENCODED_DATA.tofile(file)
+        file.close()
 
     CURRENT_ENCODING_FRAME_NUMBER += 1
 
@@ -263,8 +264,15 @@ def encode(is_run_length_valid, data):
     else:
         assert False, "Error: Invalid frame type."
 
+    if CURRENT_FRAME_TYPE == cfg.DCT_FRAME:
+        number_of_bit_for_stream_size = cfg.NUMBER_OF_BITS_FOR_DCT_STREAM_SIZE
+    elif CURRENT_FRAME_TYPE == cfg.MESH_FRAME and (CURRENT_LAYER % 2) == 0:
+        number_of_bit_for_stream_size = cfg.NUMBER_OF_BITS_FOR_MESH_STRUCT_STREAM
+    elif CURRENT_FRAME_TYPE == cfg.MOTION_VECTORS_FRAME or CURRENT_FRAME_TYPE == cfg.MESH_FRAME:
+        number_of_bit_for_stream_size = cfg.NUMBER_OF_BITS_FOR_MOTION_VECTOR_STREAM
+
     current_frame_size = len(CURRENT_FRAME)
-    ENCODED_DATA += num_to_bitarray(current_frame_size, cfg.NUMBER_OF_BITS_FOR_DCT_STREAM_SIZE)
+    ENCODED_DATA += num_to_bitarray(current_frame_size, number_of_bit_for_stream_size)
     ENCODED_DATA += CURRENT_FRAME
     CURRENT_FRAME = bitarray.bitarray()
     CURRENT_LAYER += 1
@@ -310,18 +318,16 @@ def decode():
 
     data = []
 
-    decoding_dictionary = RUN_LENGTH_KEY
-
     frame_type = bitarray_to_num(
         ENCODED_DATA[DATA_TO_DECODE_OFFSET: DATA_TO_DECODE_OFFSET + cfg.NUMBER_OF_BITS_FOR_FRAME_TYPE])
     print("frame_type = " + str(frame_type))
-
-    if frame_type == cfg.DCT_FRAME:
-        decoding_dictionary = RUN_LENGTH_KEY
-    elif frame_type == cfg.MOTION_VECTORS_FRAME:
-        decoding_dictionary = MOTION_VECTORS_KEY
-
     DATA_TO_DECODE_OFFSET += cfg.NUMBER_OF_BITS_FOR_FRAME_TYPE
+
+    box_size = -1
+    if frame_type == cfg.MESH_FRAME:
+        box_size = bitarray_to_num(ENCODED_DATA[DATA_TO_DECODE_OFFSET:
+                                                DATA_TO_DECODE_OFFSET + cfg.NUMBER_OF_BITS_FOR_INITIAL_MESH_SIZE])
+        DATA_TO_DECODE_OFFSET += cfg.NUMBER_OF_BITS_FOR_INITIAL_MESH_SIZE
 
     number_of_layers = 0
     if frame_type == cfg.DCT_FRAME:
@@ -333,24 +339,44 @@ def decode():
 
     for i in range(0, number_of_layers):
         new_decoded_layer = [False, np.array([], dtype=np.uint8)]
-        new_decoded_layer[0] = ENCODED_DATA[DATA_TO_DECODE_OFFSET]
+        new_decoded_layer[0] = ENCODED_DATA[DATA_TO_DECODE_OFFSET]  # adding the bit that represent if run length coding valid or not
         DATA_TO_DECODE_OFFSET += 1
+
+        if frame_type == cfg.DCT_FRAME:
+            number_of_bit_for_stream_size = cfg.NUMBER_OF_BITS_FOR_DCT_STREAM_SIZE
+        elif frame_type == cfg.MESH_FRAME and (i % 2 == 0):
+            number_of_bit_for_stream_size = cfg.NUMBER_OF_BITS_FOR_MESH_STRUCT_STREAM
+        elif frame_type == cfg.MOTION_VECTORS_FRAME or frame_type == cfg.MESH_FRAME:
+            number_of_bit_for_stream_size = cfg.NUMBER_OF_BITS_FOR_MOTION_VECTOR_STREAM
+
         layer_stream_size = bitarray_to_num(
-            ENCODED_DATA[DATA_TO_DECODE_OFFSET: DATA_TO_DECODE_OFFSET + cfg.NUMBER_OF_BITS_FOR_DCT_STREAM_SIZE])
-        DATA_TO_DECODE_OFFSET += cfg.NUMBER_OF_BITS_FOR_DCT_STREAM_SIZE
+            ENCODED_DATA[DATA_TO_DECODE_OFFSET: DATA_TO_DECODE_OFFSET + number_of_bit_for_stream_size])
+        DATA_TO_DECODE_OFFSET += number_of_bit_for_stream_size
+
         sub_encoded_stream = ENCODED_DATA[DATA_TO_DECODE_OFFSET:DATA_TO_DECODE_OFFSET + layer_stream_size]
         DATA_TO_DECODE_OFFSET += layer_stream_size
 
         if frame_type == cfg.DCT_FRAME:
-            new_decoded_layer[1] = sub_encoded_stream.decode(CODING_DICTIONARIES[decoding_dictionary])
-        elif frame_type == cfg.MOTION_VECTORS_FRAME:
-            new_decoded_layer[1] = CURRENT_FRAME.decode(CODING_DICTIONARIES[MOTION_VECTORS_KEY])
+            new_decoded_layer[1] = np.array(sub_encoded_stream.decode(CODING_DICTIONARIES[RUN_LENGTH_KEY]), dtype=np.uint8)
+        elif frame_type == cfg.MESH_FRAME and (i % 2 == 0):
+            layer_offset = 0
+            current_element_index = 0
+            while layer_offset < len(sub_encoded_stream):
+                if new_decoded_layer[0] and (current_element_index % 2) == 0:
+                    bit_size = cfg.NUMBER_OF_BITS_FOR_MESH_STRUCT_COUNT
+                else:
+                    bit_size = cfg.NUMBER_OF_BITS_FOR_MESH_STRUCT_NODE
+                new_decoded_layer[1] = np.append(new_decoded_layer[1], bitarray_to_num(sub_encoded_stream[layer_offset:
+                                                                                       layer_offset + bit_size]))
+                layer_offset += bit_size
+                current_element_index += 1
+        elif frame_type == cfg.MOTION_VECTORS_FRAME or frame_type == cfg.MESH_FRAME:
+            new_decoded_layer[1] = np.array(sub_encoded_stream.decode(CODING_DICTIONARIES[MOTION_VECTORS_KEY]), dtype=np.int)
 
         data.append(new_decoded_layer)
 
     CURRENT_DECODING_FRAME_NUMBER += 1
 
-    box_size = 256
     return frame_type, box_size, data
 
 
