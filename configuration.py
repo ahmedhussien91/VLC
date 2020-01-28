@@ -64,7 +64,7 @@ NUMBER_OF_BITS_FOR_MESH_STRUCT_NODE = 1
 # Encoder Mode
 ENCODER_MODE = 1
 # adaptive huffman
-ADABT_MODE = 0
+ADAPT_MODE = 0
 
 # YUV format
 YUV_CONFIG = [4, 1, 1]
