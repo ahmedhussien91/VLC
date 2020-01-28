@@ -2,6 +2,7 @@ import configuration as cfg
 import numpy as np
 import bitarray
 import time
+import os.path
 import random
 
 RUN_LENGTH_KEY = 0
@@ -35,6 +36,9 @@ CURRENT_FRAME_TYPE = cfg.DCT_FRAME
 CURRENT_LAYER = 0
 CURRENT_FRAME = bitarray.bitarray()
 FRAME_OPENED = False
+
+CURRENT_ENCODING_FRAME_NUMBER = 0
+CURRENT_DECODING_FRAME_NUMBER = 0
 
 DATA_TO_DECODE_OFFSET = 0
 
@@ -203,16 +207,19 @@ def begin_encoding(frame_type, number_of_layers=3, box_size=256):
 
 # this function must be called after finishing the frame to save it to the file and clean the frame
 def end_encoding():
-    global CURRENT_FRAME, FRAME_OPENED, CURRENT_LAYER
+    global CURRENT_FRAME, FRAME_OPENED, CURRENT_LAYER, CURRENT_ENCODING_FRAME_NUMBER, ENCODED_DATA
 
     if not FRAME_OPENED:
         print("Error: frame already closed.")
         return False
 
     print('encoded stream = ' + str(len(ENCODED_DATA)))
-    with open(cfg.OUTPUT_FILE_NAME, 'wb') as file:
+    with open(cfg.OUTPUT_FILES_NAME_PATH + str(CURRENT_ENCODING_FRAME_NUMBER) + cfg.FRAME_FILE_EXTENSION, 'wb') as file:
         ENCODED_DATA.tofile(file)
 
+    CURRENT_ENCODING_FRAME_NUMBER += 1
+
+    ENCODED_DATA = bitarray.bitarray()
     CURRENT_FRAME = bitarray.bitarray()
     FRAME_OPENED = False
     CURRENT_LAYER = 0
@@ -253,6 +260,8 @@ def encode(is_run_length_valid, data):
             CURRENT_FRAME += encode_mesh(data[i], (is_run_length_valid and (i % 2) == 0))
     elif CURRENT_FRAME_TYPE == cfg.MOTION_VECTORS_FRAME or CURRENT_FRAME_TYPE == cfg.MESH_FRAME:
         CURRENT_FRAME.encode(CODING_DICTIONARIES[MOTION_VECTORS_KEY], data)
+    else:
+        assert False, "Error: Invalid frame type."
 
     current_frame_size = len(CURRENT_FRAME)
     ENCODED_DATA += num_to_bitarray(current_frame_size, cfg.NUMBER_OF_BITS_FOR_DCT_STREAM_SIZE)
@@ -268,12 +277,16 @@ def begin_decoding():
 
     DATA_TO_DECODE_OFFSET = 0
 
-    if len(ENCODED_DATA) == 0:
-        ENCODED_DATA = bitarray.bitarray()
+    filename = cfg.INPUT_FILES_NAME_PATH + str(CURRENT_DECODING_FRAME_NUMBER) + cfg.FRAME_FILE_EXTENSION
+    if os.path.exists(filename):
+        if len(ENCODED_DATA) == 0:
+            ENCODED_DATA = bitarray.bitarray()
 
-        with open(cfg.INPUT_FILE_NAME, 'rb') as file:
-            ENCODED_DATA.fromfile(file)
-            file.close()
+            with open(filename, 'rb') as file:
+                ENCODED_DATA.fromfile(file)
+                file.close()
+    else:
+        ENCODED_DATA = bitarray.bitarray()
 
 
 def end_decoding():
@@ -290,7 +303,10 @@ def end_decoding():
 # length of the returned list will be 1 in case of DCT frame
 # and the number of the layers in case of mesh or motion vectors frames
 def decode():
-    global DATA_TO_DECODE_OFFSET, ENCODED_DATA
+    global DATA_TO_DECODE_OFFSET, ENCODED_DATA, CURRENT_DECODING_FRAME_NUMBER
+
+    if ENCODED_DATA.length() == 0:
+        return cfg.EOF_REACHED, -1, []
 
     data = []
 
@@ -331,6 +347,8 @@ def decode():
             new_decoded_layer[1] = CURRENT_FRAME.decode(CODING_DICTIONARIES[MOTION_VECTORS_KEY])
 
         data.append(new_decoded_layer)
+
+    CURRENT_DECODING_FRAME_NUMBER += 1
 
     box_size = 256
     return frame_type, box_size, data

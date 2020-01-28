@@ -46,8 +46,9 @@ runlenght_config = ([
 ])
 
 # Input/Output file paths
-INPUT_FILE_NAME = 'TestingOutput/test.bin'
-OUTPUT_FILE_NAME = 'TestingOutput/test.bin'
+INPUT_FILES_NAME_PATH = 'TestingOutput/'
+OUTPUT_FILES_NAME_PATH = 'TestingOutput/'
+FRAME_FILE_EXTENSION = '.bin'
 NUMBER_OF_BITS_FOR_FRAME_TYPE = 2
 NUMBER_OF_BITS_FOR_DCT_STREAM_SIZE = 25
 NUMBER_OF_BITS_FOR_MESH_STRUCT_STREAM = 14
